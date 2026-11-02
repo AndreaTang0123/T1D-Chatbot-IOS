@@ -1,0 +1,14 @@
+.DS_Store
+.build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+.venv*/
+__pycache__/
+.env
+analysis/forecast/data/
+analysis/forecast/artifacts/
+*.csv
+*.mlmodel
+*.mlpackage/
+*.mlmodelc/

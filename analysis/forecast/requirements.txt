@@ -1,0 +1,4 @@
+# Tested with Python 3.11 on Apple Silicon macOS. Keep versions fixed for reproducibility.
+numpy==1.26.4
+scikit-learn==1.5.1
+coremltools==9.0

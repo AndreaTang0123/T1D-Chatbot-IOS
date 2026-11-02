@@ -1,0 +1,45 @@
+// !$*UTF8*$!
+{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {
+150F7023C9D4602BC1A77688 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/App/AppState.swift"; sourceTree = "<group>"; };
+8E9ECD0529ED69536BDBD8C4 = {isa = PBXBuildFile; fileRef = 150F7023C9D4602BC1A77688; };
+DDBCE99E685727C1B359AD53 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/App/JoeMobileApp.swift"; sourceTree = "<group>"; };
+94F5DAC3299BD2CF66B06CF4 = {isa = PBXBuildFile; fileRef = DDBCE99E685727C1B359AD53; };
+3886D5FB4A52242B3A089452 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Models/StoredRecords.swift"; sourceTree = "<group>"; };
+6F51FEF41597A9860D3D061E = {isa = PBXBuildFile; fileRef = 3886D5FB4A52242B3A089452; };
+9ED4CC0397B11AF0A31122DB = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/AssistantService.swift"; sourceTree = "<group>"; };
+DD3EBC3D2FD85A9EF7462F75 = {isa = PBXBuildFile; fileRef = 9ED4CC0397B11AF0A31122DB; };
+1B3AE69495B13355B02822B8 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/CalendarService.swift"; sourceTree = "<group>"; };
+6B163510C4A307EC1A64C6C9 = {isa = PBXBuildFile; fileRef = 1B3AE69495B13355B02822B8; };
+43C345739EE47D4EC60E4D16 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/ForecastService.swift"; sourceTree = "<group>"; };
+D8D783A4B22E236C34FF68B5 = {isa = PBXBuildFile; fileRef = 43C345739EE47D4EC60E4D16; };
+95A48DF3C7DD09F6E1FFBB95 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/HealthKitService.swift"; sourceTree = "<group>"; };
+0A58BE0013B8AABC29223FAD = {isa = PBXBuildFile; fileRef = 95A48DF3C7DD09F6E1FFBB95; };
+2294A6BD8D833E10D3F3E6F1 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/LocationService.swift"; sourceTree = "<group>"; };
+C1FC9579654208BF8AAD337E = {isa = PBXBuildFile; fileRef = 2294A6BD8D833E10D3F3E6F1; };
+32E4103F04205303C443C6AE = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/NightscoutClient.swift"; sourceTree = "<group>"; };
+C0FA6D66891399EC3CBDABEC = {isa = PBXBuildFile; fileRef = 32E4103F04205303C443C6AE; };
+7D3509E40FD1D6059D5F2BBF = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Services/SpeechService.swift"; sourceTree = "<group>"; };
+357C781C3DAFB313F212E5B2 = {isa = PBXBuildFile; fileRef = 7D3509E40FD1D6059D5F2BBF; };
+4A1AFA359AF386B1BB139A52 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Storage/KeychainStore.swift"; sourceTree = "<group>"; };
+3BB1DC397B0E810391210DC0 = {isa = PBXBuildFile; fileRef = 4A1AFA359AF386B1BB139A52; };
+EDB56896CE14105DE93E6219 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Storage/LocalStore.swift"; sourceTree = "<group>"; };
+067D625B02E86E34509A5FF1 = {isa = PBXBuildFile; fileRef = EDB56896CE14105DE93E6219; };
+25FACD50E2F7944DCE925D23 = {isa = PBXFileReference; lastKnownFileType = "sourcecode.swift"; path = "JoeMobile/Views/RootView.swift"; sourceTree = "<group>"; };
+726746E854AD885413CFE94A = {isa = PBXBuildFile; fileRef = 25FACD50E2F7944DCE925D23; };
+A8792157CB4F27FB949C035F = {isa = PBXFileReference; explicitFileType = wrapper.application; path = JoeMobile.app; sourceTree = BUILT_PRODUCTS_DIR; };
+BC4A71180870F7945155FBB0 = {isa = XCLocalSwiftPackageReference; relativePath = ..; };
+D84056C45D39F3386388DF0E = {isa = XCSwiftPackageProductDependency; package = BC4A71180870F7945155FBB0; productName = JoeCore; };
+42F202F8D987BE18DDA2010D = {isa = PBXBuildFile; productRef = D84056C45D39F3386388DF0E; };
+878A52FC5FF6A57D50B7B870 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (8E9ECD0529ED69536BDBD8C4,94F5DAC3299BD2CF66B06CF4,6F51FEF41597A9860D3D061E,DD3EBC3D2FD85A9EF7462F75,6B163510C4A307EC1A64C6C9,D8D783A4B22E236C34FF68B5,0A58BE0013B8AABC29223FAD,C1FC9579654208BF8AAD337E,C0FA6D66891399EC3CBDABEC,357C781C3DAFB313F212E5B2,3BB1DC397B0E810391210DC0,067D625B02E86E34509A5FF1,726746E854AD885413CFE94A); runOnlyForDeploymentPostprocessing = 0; };
+41D311A605520FC7B8B9A980 = {isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+E2AA269EB967A8853A258BFA = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (42F202F8D987BE18DDA2010D); runOnlyForDeploymentPostprocessing = 0; };
+EC6AE75C017423A0C5A951A8 = {isa = PBXGroup; children = (150F7023C9D4602BC1A77688,DDBCE99E685727C1B359AD53,3886D5FB4A52242B3A089452,9ED4CC0397B11AF0A31122DB,1B3AE69495B13355B02822B8,43C345739EE47D4EC60E4D16,95A48DF3C7DD09F6E1FFBB95,2294A6BD8D833E10D3F3E6F1,32E4103F04205303C443C6AE,7D3509E40FD1D6059D5F2BBF,4A1AFA359AF386B1BB139A52,EDB56896CE14105DE93E6219,25FACD50E2F7944DCE925D23,A8792157CB4F27FB949C035F); sourceTree = "<group>"; };
+DFC1D21D28438E531F817435 = {isa = XCBuildConfiguration; name = Debug; buildSettings = { SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 26.0; CLANG_ENABLE_MODULES = YES; SWIFT_VERSION = 5.0; }; };
+6C7EFF6369083C8E1F2B1994 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = "org.joe.mobile"; INFOPLIST_FILE = "JoeMobile/Resources/Info.plist"; CODE_SIGN_ENTITLEMENTS = "JoeMobile/Resources/JoeMobile.entitlements"; CODE_SIGN_STYLE = "Automatic"; TARGETED_DEVICE_FAMILY = "1"; SWIFT_VERSION = "5.0"; SWIFT_STRICT_CONCURRENCY = "targeted"; GENERATE_INFOPLIST_FILE = "NO"; CURRENT_PROJECT_VERSION = "1"; MARKETING_VERSION = "0.1.0"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-Onone"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; ENABLE_USER_SCRIPT_SANDBOXING = "YES"; }; };
+A1E97C491A309D8FE8E303CF = {isa = XCBuildConfiguration; name = Release; buildSettings = { SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 26.0; CLANG_ENABLE_MODULES = YES; SWIFT_VERSION = 5.0; }; };
+DD75E2CB1C510A828AC72D96 = {isa = XCBuildConfiguration; name = Release; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = "org.joe.mobile"; INFOPLIST_FILE = "JoeMobile/Resources/Info.plist"; CODE_SIGN_ENTITLEMENTS = "JoeMobile/Resources/JoeMobile.entitlements"; CODE_SIGN_STYLE = "Automatic"; TARGETED_DEVICE_FAMILY = "1"; SWIFT_VERSION = "5.0"; SWIFT_STRICT_CONCURRENCY = "targeted"; GENERATE_INFOPLIST_FILE = "NO"; CURRENT_PROJECT_VERSION = "1"; MARKETING_VERSION = "0.1.0"; LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks"; SWIFT_OPTIMIZATION_LEVEL = "-O"; SUPPORTED_PLATFORMS = "iphoneos iphonesimulator"; ENABLE_USER_SCRIPT_SANDBOXING = "YES"; }; };
+C9685CF302D88B7835380DBE = {isa = XCConfigurationList; buildConfigurations = (DFC1D21D28438E531F817435,A1E97C491A309D8FE8E303CF); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+1B672BF3DA427763BF644BE3 = {isa = XCConfigurationList; buildConfigurations = (6C7EFF6369083C8E1F2B1994,DD75E2CB1C510A828AC72D96); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+34A04005BCAF206EEC990BD9 = {isa = PBXNativeTarget; buildConfigurationList = 1B672BF3DA427763BF644BE3; buildPhases = (878A52FC5FF6A57D50B7B870,E2AA269EB967A8853A258BFA,41D311A605520FC7B8B9A980); buildRules = (); dependencies = (); name = JoeMobile; packageProductDependencies = (D84056C45D39F3386388DF0E); productName = JoeMobile; productReference = A8792157CB4F27FB949C035F; productType = "com.apple.product-type.application"; };
+244210E48437B6556980A702 = {isa = PBXProject; attributes = {LastUpgradeCheck = 2600; TargetAttributes = {34A04005BCAF206EEC990BD9 = {CreatedOnToolsVersion = 26.0; SystemCapabilities = {com.apple.HealthKit = {enabled = 1; }; com.apple.BackgroundModes = {enabled = 1; }; }; }; }; }; buildConfigurationList = C9685CF302D88B7835380DBE; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = EC6AE75C017423A0C5A951A8; packageReferences = (BC4A71180870F7945155FBB0); projectDirPath = ""; projectRoot = ""; targets = (34A04005BCAF206EEC990BD9); };
+}; rootObject = 244210E48437B6556980A702; }
