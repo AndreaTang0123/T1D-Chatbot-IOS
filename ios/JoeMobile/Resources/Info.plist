@@ -12,10 +12,10 @@
 <key>UILaunchScreen</key><dict/>
 <key>UIApplicationSceneManifest</key><dict><key>UIApplicationSupportsMultipleScenes</key><false/></dict>
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
-<key>NSHealthShareUsageDescription</key><string>Joe 读取步数、心率、运动和睡眠，在本机研究生活 context 与血糖预测的关联。</string>
-<key>NSCalendarsFullAccessUsageDescription</key><string>Joe 在本机将近期日程归类为生活 context，不保存标题、备注或参与者。</string>
-<key>NSLocationWhenInUseUsageDescription</key><string>Joe 将粗略位置转换成你定义的地点类别，不记录连续轨迹。</string>
-<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>可选：使用低功耗 Visits 与地理围栏记录地点类别变化。</string>
+<key>NSHealthShareUsageDescription</key><string>Joe reads steps, heart rate, workouts, and sleep to study associations between lifestyle context and glucose forecasts on this device.</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>Joe classifies recent calendar events into lifestyle categories on this device without storing titles, notes, or attendees.</string>
+<key>NSLocationWhenInUseUsageDescription</key><string>Joe converts approximate locations into your chosen place categories without recording a continuous route.</string>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>Optional: use low-power Visits and geofences to record changes in place categories.</string>
 <key>UIBackgroundModes</key><array><string>fetch</string></array>
 <key>BGTaskSchedulerPermittedIdentifiers</key><array><string>org.joe.mobile.refresh</string></array>
 <key>ITSAppUsesNonExemptEncryption</key><false/>

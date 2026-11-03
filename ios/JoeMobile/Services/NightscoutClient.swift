@@ -32,12 +32,12 @@ actor NightscoutClient {
             if try count(data) >= 10000 { throw NightscoutError.truncated }
             treatments = try NightscoutDecoder.treatments(data, receivedAt: now)
         } catch is CancellationError { throw CancellationError() }
-        catch { warnings.append("泵/餐食同步失败，相关特征可能缺失") }
+        catch { warnings.append("Pump/meal sync failed. Related features may be missing.") }
         do {
             let data = try await fetch(credentials.request(path: "api/v1/profile.json", query: [.init(name: "count", value: "1")]))
             _ = try count(data); profile = data
         } catch is CancellationError { throw CancellationError() }
-        catch { warnings.append("Profile 不可用；不会推断基础率或 IOB") }
+        catch { warnings.append("Profile unavailable. Basal rate and IOB will not be inferred.") }
         return Result(glucose: glucose, treatments: treatments, profile: profile, warnings: warnings)
     }
     private func count(_ data: Data) throws -> Int {

@@ -63,13 +63,13 @@ public enum DataIssue: String, Error, LocalizedError {
     case noGlucose, staleGlucose, insufficientHistory, invalidData, modelMissing, schemaMismatch, invalidPrediction
     public var errorDescription: String? {
         switch self {
-        case .noGlucose: "没有可用 CGM 数据"
-        case .staleGlucose: "CGM 已过期，暂停预测"
-        case .insufficientHistory: "需要连续至少 30 分钟的 CGM 历史"
-        case .invalidData: "数据无效"
-        case .modelMissing: "尚未安装训练好的 Core ML 模型"
-        case .schemaMismatch: "模型与特征版本不匹配"
-        case .invalidPrediction: "模型输出无效，已停止显示预测"
+        case .noGlucose: "No CGM data available"
+        case .staleGlucose: "CGM data is stale. Forecasting is paused."
+        case .insufficientHistory: "At least 30 minutes of continuous CGM history is required"
+        case .invalidData: "Invalid data"
+        case .modelMissing: "No trained Core ML model is installed"
+        case .schemaMismatch: "Model and feature schema versions do not match"
+        case .invalidPrediction: "Invalid model output. Forecasts are hidden."
         }
     }
 }

@@ -9,8 +9,8 @@ import BackgroundTasks
         WindowGroup {
             Group {
                 if let state { RootView(state: state) }
-                else if let startupError { ContentUnavailableView("无法打开本地数据库", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError)) }
-                else { ProgressView("正在打开 Joe…") }
+                else if let startupError { ContentUnavailableView("Unable to open the local database", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError)) }
+                else { ProgressView("Opening Joe…") }
             }
             .task {
                 guard state == nil, startupError == nil else { return }

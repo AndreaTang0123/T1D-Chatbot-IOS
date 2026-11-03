@@ -6,7 +6,7 @@ import AVFoundation
         synthesizer.stopSpeaking(at: .immediate)
         // Do not initiate network voice downloads. Use only an already installed system voice.
         let voices = AVSpeechSynthesisVoice.speechVoices()
-        guard let voice = voices.first(where: { $0.language.hasPrefix("zh") }) ?? voices.first else { return }
+        guard let voice = voices.first(where: { $0.language.hasPrefix("en") }) ?? voices.first else { return }
         let utterance = AVSpeechUtterance(string: text); utterance.voice = voice
         synthesizer.speak(utterance)
     }

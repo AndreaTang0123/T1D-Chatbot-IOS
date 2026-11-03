@@ -29,13 +29,13 @@ public enum NightscoutError: Error, LocalizedError {
     case invalidURL, invalidCredential, authentication, http(Int), malformed, network, truncated
     public var errorDescription: String? {
         switch self {
-        case .invalidURL: "请输入有效 HTTPS Nightscout 地址，不要包含账号、查询参数或 token"
-        case .invalidCredential: "API secret 必须为 40 位 SHA-1；也可选择只读 access token"
-        case .authentication: "Nightscout 认证失败，请检查只读权限"
-        case .http(let code): "Nightscout HTTP 错误：\(code)"
-        case .malformed: "Nightscout 返回格式无效"
-        case .network: "无法连接 Nightscout，请检查网络和公开 HTTPS 地址"
-        case .truncated: "历史记录超过单页限制，请缩短同步窗口"
+        case .invalidURL: "Enter a valid HTTPS Nightscout URL without credentials, query parameters, or a token"
+        case .invalidCredential: "The API secret must be a 40-character SHA-1 hash; alternatively, use a read-only access token"
+        case .authentication: "Nightscout authentication failed. Check your read permissions."
+        case .http(let code): "Nightscout HTTP error: \(code)"
+        case .malformed: "Invalid Nightscout response format"
+        case .network: "Cannot connect to Nightscout. Check your network and public HTTPS URL."
+        case .truncated: "History exceeds the page limit. Use a shorter sync window."
         }
     }
 }

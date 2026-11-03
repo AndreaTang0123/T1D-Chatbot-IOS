@@ -38,7 +38,7 @@ import Observation
     }
     func saveCurrentPlace(category: String) {
         guard let location = latestLocation, Date().timeIntervalSince(location.timestamp) < 900 else {
-            message = "请先获取一个近期位置"; return
+            message = "Get a recent location first"; return
         }
         places.removeAll { $0.id == category }
         places.append(NamedPlace(id: category, latitude: location.coordinate.latitude, longitude: location.coordinate.longitude, radius: 200))
@@ -67,7 +67,7 @@ import Observation
               Date().timeIntervalSince(location.timestamp) < 900 else { return }
         latestLocation = location; classify(location)
     }
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) { message = "位置不可用" }
+    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) { message = "Location unavailable" }
     func locationManager(_ manager: CLLocationManager, didVisit visit: CLVisit) {
         guard UserDefaults.standard.bool(forKey: "locationEnabled") else { return }
         let point = CLLocation(latitude: visit.coordinate.latitude, longitude: visit.coordinate.longitude)

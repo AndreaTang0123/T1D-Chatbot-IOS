@@ -34,6 +34,6 @@ enum KeychainStore {
     }
     struct Failure: LocalizedError {
         let status: OSStatus
-        var errorDescription: String? { "Keychain 操作失败（\(status)）" }
+        var errorDescription: String? { "Keychain operation failed (\(status))" }
     }
 }

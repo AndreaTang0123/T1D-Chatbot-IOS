@@ -16,15 +16,15 @@ import JoeCore
     var context: LifestyleContext?
     var calendarSnapshot = CalendarService.Snapshot()
     var forecast: Forecast?
-    var forecastStatus = "等待 CGM 数据"
-    var syncStatus = "尚未同步"
+    var forecastStatus = "Waiting for CGM data"
+    var syncStatus = "Not synced yet"
     var syncError: String?
     var warnings: [String] = []
     var isRefreshing = false
     var connected = false
     var lastSync: Date?
-    var reply = "你好，我是 Joe。连接 Nightscout 后，可以查看测量数据和实验性预测。"
-    var assistantMode = "确定性本地解释"
+    var reply = "Hi, I'm Joe. Connect to Nightscout to view measurements and experimental forecasts."
+    var assistantMode = "Deterministic on-device explanation"
     var isAnswering = false
     var matchedCount = 0
     var mae30: Double?
@@ -40,7 +40,7 @@ import JoeCore
     init(store: LocalStore) {
         self.store = store
         do { connected = try KeychainStore.load() != nil; try reload() }
-        catch { syncError = "无法读取本地数据或 Keychain" }
+        catch { syncError = "Unable to read local data or Keychain" }
         health.onChange = { [weak self] in Task { await self?.refresh() } }; health.observe()
     }
     func reload() throws {
@@ -59,7 +59,7 @@ import JoeCore
             let previous = try KeychainStore.load()
             // Do not combine different Nightscout sources in the same research database.
             if let previous, previous.baseURL != credentials.baseURL {
-                syncError = "更换 Nightscout 地址前，请先使用清除本地数据功能。"; return
+                syncError = "Clear local data before switching to a different Nightscout URL."; return
             }
             try KeychainStore.save(credentials); connected = true; await refresh()
         } catch { syncError = error.localizedDescription }
@@ -75,11 +75,11 @@ import JoeCore
                 let result = try await nightscout.sync(credentials, since: since, now: now)
                 try Task.checkCancellation()
                 try store.ingest(glucose: result.glucose, treatments: result.treatments, profile: result.profile, at: now)
-                warnings = result.warnings; syncStatus = "已直连 Nightscout"; lastSync = now
-                if result.glucose.isEmpty { warnings.append("本次响应没有有效 CGM，显示本地缓存") }
-            } else { syncStatus = "请在设置中连接 Nightscout" }
+                warnings = result.warnings; syncStatus = "Connected directly to Nightscout"; lastSync = now
+                if result.glucose.isEmpty { warnings.append("No valid CGM readings in this response. Showing cached data.") }
+            } else { syncStatus = "Connect to Nightscout in Settings" }
         } catch is CancellationError { return }
-        catch { syncError = error.localizedDescription; syncStatus = "连接失败 · 本地缓存" }
+        catch { syncError = error.localizedDescription; syncStatus = "Connection failed · Cached data" }
         guard !Task.isCancelled else { return }
         now = Date()
         do {
@@ -100,10 +100,10 @@ import JoeCore
             let elapsed = start.duration(to: .now).components
             latencyMS = Double(elapsed.attoseconds)/1e15 + Double(elapsed.seconds)*1000
             try store.save(forecast: prediction); forecast = prediction
-            forecastStatus = "实验性 · 仅 shadow mode"
+            forecastStatus = "Experimental · Shadow mode only"
             try reload()
         } catch let issue as DataIssue { forecast = nil; forecastStatus = issue.localizedDescription }
-        catch { forecast = nil; forecastStatus = "本地处理失败：" + error.localizedDescription }
+        catch { forecast = nil; forecastStatus = "Local processing failed: " + error.localizedDescription }
     }
     func ask(_ text: String) async {
         guard !isAnswering, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -117,7 +117,7 @@ import JoeCore
             let url = FileManager.default.temporaryDirectory.appendingPathComponent("Joe-research-export.json")
             try store.exportResearch().write(to: url, options: [.atomic, .completeFileProtection])
             exportURL = url
-        } catch { syncError = "导出失败" }
+        } catch { syncError = "Export failed" }
     }
     func erase() {
         guard !isRefreshing, !isAnswering else { return }
@@ -127,7 +127,7 @@ import JoeCore
             if let exportURL { try? FileManager.default.removeItem(at: exportURL) }; exportURL = nil
             connected = false; glucose = []; treatments = []; context = nil; forecast = nil
             matchedCount = 0; mae30 = nil; mae60 = nil; lastSync = nil; warnings = []; syncError = nil
-            syncStatus = "本地数据已清除"; forecastStatus = "等待 CGM 数据"; reply = "本地记录已清除。"
-        } catch { syncError = "清除失败：" + error.localizedDescription }
+            syncStatus = "Local data cleared"; forecastStatus = "Waiting for CGM data"; reply = "Local records have been cleared."
+        } catch { syncError = "Failed to clear data: " + error.localizedDescription }
     }
 }

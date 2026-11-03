@@ -50,9 +50,9 @@ public enum FeatureBuilder {
 public enum ContextClassifier {
     public static func calendarCategory(_ title: String) -> String {
         let text = title.lowercased()
-        let rules = [("medical", ["doctor", "clinic", "医生", "医院"]), ("exercise", ["gym", "run", "workout", "运动", "健身"]),
-                     ("meal", ["lunch", "dinner", "breakfast", "午餐", "晚餐"]), ("travel", ["flight", "train", "travel", "航班"]),
-                     ("class", ["class", "lecture", "课"]), ("meeting", ["meeting", "sync", "会议"])]
+        let rules = [("medical", ["doctor", "clinic", "physician", "hospital"]), ("exercise", ["gym", "run", "workout", "exercise", "fitness"]),
+                     ("meal", ["lunch", "dinner", "breakfast", "meal", "supper"]), ("travel", ["flight", "train", "travel", "trip"]),
+                     ("class", ["class", "lecture", "seminar"]), ("meeting", ["meeting", "sync", "conference"])]
         return rules.first { $0.1.contains(where: text.contains) }?.0 ?? "other"
     }
 }
