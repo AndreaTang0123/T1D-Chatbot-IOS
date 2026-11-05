@@ -20,7 +20,8 @@ import BackgroundTasks
         }
         .onChange(of: phase) { _, phase in
             if phase == .active { Task { await state?.refresh() } }
-            if phase == .background { state?.speech.stop(); scheduleRefresh() }
+            if phase != .active { state?.voiceInput.cancel(); state?.speech.stop() }
+            if phase == .background { scheduleRefresh() }
         }
         .backgroundTask(.appRefresh("org.joe.mobile.refresh")) { await refreshInBackground() }
     }

@@ -119,4 +119,22 @@ final class JoeCoreTests: XCTestCase {
             for (actual, expected) in zip(row.modelInput, fixture.expected) { XCTAssertEqual(actual, expected, accuracy: 1e-9) }
         }
     }
+    func testTrendArrowsPreserveMissingness() {
+        let expected = ["DoubleUp": "↑↑", "SingleUp": "↑", "FortyFiveUp": "↗", "Flat": "→",
+                        "FortyFiveDown": "↘", "SingleDown": "↓", "DoubleDown": "↓↓"]
+        for (direction, arrow) in expected { XCTAssertEqual(GlucoseTrend(direction: direction).arrow, arrow) }
+        XCTAssertEqual(GlucoseTrend(direction: nil), .unknown)
+        XCTAssertEqual(GlucoseTrend(direction: "NOT COMPUTABLE"), .unknown)
+        XCTAssertEqual(GlucoseTrend(direction: "flat").label, "Steady")
+    }
+    func testLatestBolusExcludesBasalAndFutureEvents() {
+        let earlier = Treatment(id: "early", timestamp: time.addingTimeInterval(-600), kind: "Meal Bolus", insulin: 2)
+        let latest = Treatment(id: "latest", timestamp: time.addingTimeInterval(-300), kind: "Correction Bolus", insulin: 1)
+        let basal = Treatment(id: "basal", timestamp: time.addingTimeInterval(-60), kind: "Temp Basal", insulin: 3, rate: 0.8, duration: 30)
+        let zero = Treatment(id: "zero", timestamp: time, kind: "Bolus", insulin: 0)
+        let future = Treatment(id: "future", timestamp: time.addingTimeInterval(60), kind: "Bolus", insulin: 4)
+        XCTAssertEqual(Treatment.latestBolus(in: [latest, earlier, basal, future, zero], at: time)?.id, "latest")
+        XCTAssertNil(Treatment.latestBolus(in: [basal, future, zero], at: time))
+    }
+
 }

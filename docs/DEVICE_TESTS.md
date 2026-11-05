@@ -29,6 +29,19 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Clearing removes local records, credentials, named places, visit records, and the current temporary export, and disables collection.
 - [ ] Export destinations are chosen explicitly by the user; exports contain no credentials.
 
+## Chat and navigation
+
+- [ ] A cold launch selects Joe; tab order is Joe, Overview, Lifestyle, Settings.
+- [ ] Typed messages and Joe responses remain visible across tab changes, with correct bubble alignment and scroll-to-latest behavior; repeated sends do not duplicate messages.
+- [ ] Holding the microphone requests permissions only on demand. Releasing before authorization completes never starts a recording afterward.
+- [ ] On-device English transcription updates a draft; releasing finishes recognition; sending uses the reviewed text exactly once.
+- [ ] Denied microphone/speech access and unavailable on-device recognition show actionable messages while typing remains available.
+- [ ] Recording stops on release, interruption, tab change, background entry, or the duration limit. Returning to the app does not restart recording.
+- [ ] Read-aloud works after recording, including Bluetooth/audio-route checks on a real iPhone.
+- [ ] All data-access controls and named-place setup are in Settings. Lifestyle shows only current values and explicit unavailable/expired states.
+- [ ] Overview arrows match all seven Nightscout directions; unknown direction is not labeled steady. Stale data remains labeled historical.
+- [ ] The 3/6/12/24-hour charts switch correctly. Latest bolus ignores basal, non-bolus, zero-dose, and future events.
+
 ## Models and prospective validation
 
 - [ ] Insufficient 30-minute history, out-of-order/duplicate data, future samples, and timezone/DST changes do not contaminate features.

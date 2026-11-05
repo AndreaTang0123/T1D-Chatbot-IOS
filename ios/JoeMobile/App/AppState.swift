@@ -2,6 +2,15 @@ import Foundation
 import Observation
 import JoeCore
 
+struct ChatMessage: Identifiable {
+    enum Role { case user, joe }
+    let id = UUID()
+    let role: Role
+    let text: String
+    let timestamp = Date()
+    var mode: String? = nil
+}
+
 @MainActor @Observable final class AppState {
     let store: LocalStore
     let health = HealthKitService()
@@ -9,11 +18,13 @@ import JoeCore
     let location = LocationService()
     let assistant = AssistantService()
     let speech = SpeechService()
+    let voiceInput = SpeechInputService()
     private let nightscout = NightscoutClient()
     private let forecaster = ForecastService()
     var glucose: [GlucoseSample] = []
     var treatments: [Treatment] = []
     var context: LifestyleContext?
+    var currentContext: LifestyleContext?
     var calendarSnapshot = CalendarService.Snapshot()
     var forecast: Forecast?
     var forecastStatus = "Waiting for CGM data"
@@ -24,6 +35,7 @@ import JoeCore
     var connected = false
     var lastSync: Date?
     var reply = "Hi, I'm Joe. Connect to Nightscout to view measurements and experimental forecasts."
+    var messages: [ChatMessage] = [ChatMessage(role: .joe, text: "Hi, I'm Joe. Ask about your glucose, forecasts, or lifestyle context. You can type or hold the microphone to talk. Connect your data sources in Settings.")]
     var assistantMode = "Deterministic on-device explanation"
     var isAnswering = false
     var matchedCount = 0
@@ -86,8 +98,12 @@ import JoeCore
             try reload(); location.refresh()
             let cutoff = glucose.last?.timestamp ?? now
             var collected = await health.snapshot(at: cutoff)
-            calendarSnapshot = calendar.snapshot(at: cutoff)
-            collected.calendar = calendarSnapshot.current
+            calendarSnapshot = calendar.snapshot(at: now)
+            var live = await health.snapshot(at: now)
+            live.calendar = calendarSnapshot.current
+            live.place = location.category(at: now)
+            currentContext = live
+            collected.calendar = calendar.snapshot(at: cutoff).current
             collected.place = location.category(at: cutoff)
             context = collected; try store.save(context: collected)
             try store.matchActuals(samples: glucose, now: now)
@@ -107,10 +123,13 @@ import JoeCore
     }
     func ask(_ text: String) async {
         guard !isAnswering, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        messages.append(ChatMessage(role: .user, text: question))
         isAnswering = true; defer { isAnswering = false }
         let snapshot = AssistantSnapshot(glucose: glucose.last, forecast: forecast, treatments: treatments,
-                                         context: context, now: Date(), staleAfter: staleMinutes*60)
-        reply = await assistant.answer(text, snapshot: snapshot); assistantMode = assistant.mode
+                                         context: currentContext ?? context, now: Date(), staleAfter: staleMinutes*60)
+        reply = await assistant.answer(question, snapshot: snapshot); assistantMode = assistant.mode
+        messages.append(ChatMessage(role: .joe, text: reply, mode: assistantMode))
     }
     func export() {
         do {
@@ -123,11 +142,12 @@ import JoeCore
         guard !isRefreshing, !isAnswering else { return }
         do {
             try KeychainStore.delete(); try store.erase()
-            health.disable(); UserDefaults.standard.set(false, forKey: "calendarEnabled"); location.forgetAll(); speech.stop()
+            health.disable(); UserDefaults.standard.set(false, forKey: "calendarEnabled"); location.forgetAll(); voiceInput.cancel(); speech.stop()
             if let exportURL { try? FileManager.default.removeItem(at: exportURL) }; exportURL = nil
-            connected = false; glucose = []; treatments = []; context = nil; forecast = nil
+            connected = false; glucose = []; treatments = []; context = nil; currentContext = nil; forecast = nil
             matchedCount = 0; mae30 = nil; mae60 = nil; lastSync = nil; warnings = []; syncError = nil
             syncStatus = "Local data cleared"; forecastStatus = "Waiting for CGM data"; reply = "Local records have been cleared."
+            messages = [ChatMessage(role: .joe, text: reply)]
         } catch { syncError = "Failed to clear data: " + error.localizedDescription }
     }
 }

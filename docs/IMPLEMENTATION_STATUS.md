@@ -4,31 +4,36 @@ Implementation began in a standalone repository containing only a README and imp
 
 | Module | Implemented source functionality |
 |---|---|
-| Native app | SwiftUI Overview, Lifestyle, Joe, and Settings tabs; Xcode project and shared scheme; minimum iOS 26 |
+| Native app | SwiftUI Joe (default chat), Overview, Lifestyle, and Settings tabs; Xcode project and shared scheme; minimum iOS 26 |
 | Nightscout | HTTPS GET entries/treatments/profile, token or SHA-1 authentication, initial 48-hour window, six-hour overlap, ID upserts, bounded retries, no redirects; full pages are rejected rather than silently truncated |
 | Keychain / SwiftData | URL and credentials in ThisDeviceOnly Keychain; local health records, context, features, profiles, forecasts, and errors; no CloudKit; export and clearing |
-| HealthKit | Explicit read authorization for steps, heart rate, workouts, and sleep; step statistics, merged sleep intervals, observers; unavailable data stays missing |
-| Calendar | Explicit full-access request; current/next event categories; no stored titles, notes, or attendees |
+| HealthKit | Settings-based explicit read authorization for steps, heart rate, workouts, and sleep; step statistics, merged sleep intervals, observers; unavailable data stays missing |
+| Calendar | Settings-based explicit full-access request; current/next event categories; no stored titles, notes, or attendees |
 | Location | Coarse location, optional Always Visits/significant changes/geofences, named places, and categorical visit records; no continuous routes |
 | Features | UTC five-minute buckets, causal CGM grid, separate missingness flags, and Python/Swift fixtures |
 | Forecast | Core ML CPU inference at 30/60 minutes; manifest/input/output validation; stops when model, history, or fresh CGM is unavailable |
 | Evaluation | Forecast logs, subsequent ±150-second CGM matching, errors, MAE display, and export |
-| Assistant / TTS | Foundation Models availability handling, four read-only tools, structured explanation focus, deterministic template fallback, text input, and installed English speech voices |
+| Assistant / TTS | Foundation Models availability handling, four read-only tools, structured explanation focus, deterministic template fallback, text input, installed English speech voices, and hold-to-talk on-device English transcription with editable drafts |
 | Training | Coverage report, chronological 70/15/15 split with boundary purging, A–D Ridge experiments, persistence, Random Forest comparison, Core ML export, and numerical fixtures |
 | Background | Foreground, manual, BGAppRefresh, and HealthKit observer updates; cold-start initialization; no fixed refresh guarantee |
 
 ## Verified
 
 - `swift build` successfully builds JoeCore.
-- `python3 scripts/check_core.py`: 14 checks pass, including four Python/Swift numerical fixtures.
+- `python3 scripts/check_core.py`: 16 checks pass, including four Python/Swift numerical fixtures.
 - Python 3.11: all six `python -m unittest -v test_pipeline.py` checks pass.
 - Training → Core ML conversion → local CPU prediction parity passes using temporary synthetic data. Test models are deleted afterward and are not bundled in the app.
+- The app launches in an iOS 27.2 simulator with Joe selected by default; the initial chat, composer, and tab order were visually checked. Voice capture and actual device layout remain pending.
 - iOS Swift files pass parser checks. NightscoutClient, KeychainStore, and ForecastService pass independent type checking with the local SDK.
 - The project, Info.plist, and entitlements pass `plutil -lint`.
 
-**The full iOS app now builds successfully with Xcode 27.2 for a generic iOS device with code signing disabled.** This build includes SwiftData and Foundation Models macro expansion. The `LocalStore` FileManager argument label was corrected from `atPath:` to `ofItemAtPath:`. Signed installation and device UI validation remain pending.
+**The full iOS app builds successfully with Xcode 27.2 for generic iOS device and simulator targets with code signing disabled.** This build includes SwiftData and Foundation Models macro expansion. The `LocalStore` FileManager argument label was corrected from `atPath:` to `ofItemAtPath:`. Signed installation and device UI validation remain pending.
 
-Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run.
+Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run. With full Xcode available, all 16 XCTest tests now pass.
+
+## Chat and navigation update
+
+Joe is the default tab and displays a session conversation with a bottom text/voice composer. Hold-to-talk transcribes locally to an editable draft; sending remains explicit. HealthKit, calendar, and location setup live in Settings. Lifestyle displays only current data. Overview uses Nightscout trend arrows and selectable 3/6/12/24-hour dot charts; its pump card shows only the latest bolus, excluding basal and future events. New core tests cover trend mappings and bolus selection. Microphone permissions, recording/release, audio interruptions, and real-device layouts require device acceptance testing.
 
 ## Remaining work
 

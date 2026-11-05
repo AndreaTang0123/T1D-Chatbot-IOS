@@ -11,11 +11,21 @@ A native SwiftUI iPhone app with a direct **iPhone → Nightscout HTTPS** connec
 3. Under Signing & Capabilities, choose your Apple Developer Team and change the bundle ID if necessary. Signing and provisioning must support HealthKit; entitlements are included. Do not commit personal signing settings.
 4. Connect the iPhone, enable Developer Mode, select the phone, and run the app. A Mac is needed for development installation, but not for normal use afterward. Development signing expires; long-term installation requires an appropriate developer distribution method.
 5. In **Settings**, enter the **public HTTPS Nightscout base URL** and a read-only access token, or the API secret's 40-character SHA-1 hash. The URL and credentials are stored only in the device's Keychain. Do not include the token in the base URL.
-6. In **Lifestyle**, enable HealthKit, calendar, and location access separately. Background Visits and geofences require the user to grant Always location access separately.
+6. In **Settings**, enable HealthKit, calendar, and location access separately. Background Visits and geofences require the user to grant Always location access separately.
 
 **First device acceptance test:** disable Tailscale and Wi-Fi, then open Nightscout's `/api/v1/entries.json?count=1` in Safari over cellular, authenticating if required. Refresh the app afterward. If Nightscout is reachable only through Tailscale, first provide a public, authenticated HTTPS service.
 
 Without a Core ML model, you can still sync real CGM and pump data, collect context, view charts, and use local explanations. The forecast panel explicitly displays “No trained Core ML model is installed.”
+
+## App navigation and input
+
+The tab order is **Joe → Overview → Lifestyle → Settings**, with Joe selected on launch.
+
+- **Joe:** message bubbles retain both sides of the current session, with a bottom composer, quick questions, and per-message read-aloud controls. Type a message or hold the microphone, release to finish transcription, review the text, and tap Send. Chat history is in memory for the current app session and is cleared with local data.
+- **Voice input:** microphone and speech permissions are requested on first use. Recognition requires on-device English support; audio is not uploaded and there is no cloud fallback. If permissions are granted after you release the button, hold again to begin. Recording stops on interruption, leaving the page, app inactivity, or the 55-second limit. Voice accuracy and audio routes still need device testing. See [Apple's on-device recognition requirements](https://developer.apple.com/documentation/speech/sfspeechrecognizer/supportsondevicerecognition).
+- **Overview:** a large measured glucose value and trend arrow, a 3/6/12/24-hour dot chart, experimental forecasts, the latest positive recorded bolus, and research metrics. Basal events are excluded from the bolus card. Unknown trends remain unavailable, and stale readings stay explicitly labeled.
+- **Lifestyle:** read-only current activity, sleep, calendar category, and place data, with update time and unavailable states. Display snapshots are separate from the historical context used for causal forecast features.
+- **Settings:** Nightscout connection, HealthKit/calendar/location access, optional background visits, named places, freshness settings, export, and clearing.
 
 ## Repository structure
 
