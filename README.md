@@ -2,7 +2,7 @@
 
 A native SwiftUI iPhone app with a direct **iPhone → Nightscout HTTPS** connection. Context collection, storage, Core ML inference, Apple Foundation Models, and speech synthesis run on the phone. The app does not call the original Python server, Mac mini, Tailscale, Ollama, or Gemini.
 
-**Current status: source code and a testable research pipeline are implemented, but full Xcode builds and iPhone acceptance testing remain pending. No personalized model is bundled, and forecasts are never fabricated.** See the [implementation plan](IOS_STANDALONE_IMPLEMENTATION_PLAN.md) for requirements and [implementation status](docs/IMPLEMENTATION_STATUS.md) for delivered functionality and remaining work.
+**Current status: source code and a testable research pipeline are implemented, and a full unsigned iOS build passes with Xcode 27.2. Signed iPhone installation and acceptance testing remain pending. No personalized model is bundled, and forecasts are never fabricated.** See the [implementation plan](IOS_STANDALONE_IMPLEMENTATION_PLAN.md) for requirements and [implementation status](docs/IMPLEMENTATION_STATUS.md) for delivered functionality and remaining work.
 
 ## Open and install
 

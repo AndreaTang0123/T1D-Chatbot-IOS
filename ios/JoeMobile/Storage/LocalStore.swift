@@ -12,7 +12,7 @@ import JoeCore
         container = try ModelContainer(for: schema, configurations: [config])
         // Health records stay local and are protected while the device is locked before first unlock.
         let url = config.url
-        try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], atPath: url.path)
+        try? FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: url.path)
     }
     func glucose() throws -> [GlucoseSample] {
         try context.fetch(FetchDescriptor<StoredGlucose>(sortBy: [SortDescriptor(\.timestamp)]))

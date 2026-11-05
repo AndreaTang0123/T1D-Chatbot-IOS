@@ -26,11 +26,13 @@ Implementation began in a standalone repository containing only a README and imp
 - iOS Swift files pass parser checks. NightscoutClient, KeychainStore, and ForecastService pass independent type checking with the local SDK.
 - The project, Info.plist, and entitlements pass `plutil -lint`.
 
-**Full iOS compilation and device UI validation remain pending.** At initial verification, only Command Line Tools were installed: `xcodebuild` required full Xcode, and XCTest plus FoundationModels/SwiftData macro plugins were unavailable. `swift test` could not run, so the same test source was compiled directly instead. This is not reported as a successful XCTest run.
+**The full iOS app now builds successfully with Xcode 27.2 for a generic iOS device with code signing disabled.** This build includes SwiftData and Foundation Models macro expansion. The `LocalStore` FileManager argument label was corrected from `atPath:` to `ofItemAtPath:`. Signed installation and device UI validation remain pending.
+
+Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run.
 
 ## Remaining work
 
-1. Install full Xcode and complete iPhone signing, build/run, system permission, UI, macro expansion, and background lifecycle acceptance testing.
+1. Complete signed iPhone installation and device testing of system permissions, UI, and background lifecycle behavior.
 2. Verify public Nightscout HTTPS and real authentication over cellular with Tailscale and the Mac disabled. No private Nightscout instance has been contacted.
 3. Train a personalized model using actual historical data. The repository contains no personalized model, real performance metrics, or ablation conclusions.
 4. Verify device numerical parity, latency, thermal behavior, battery use, and 3–7 days of shadow mode.
