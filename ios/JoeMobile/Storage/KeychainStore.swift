@@ -32,6 +32,12 @@ enum KeychainStore {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service,
          kSecAttrAccount as String: "nightscout"]
     }
+    // Remove credentials from the superseded cloud prototype without reading or using them.
+    static func removeLegacyConversationCredential() {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: "org.joe.mobile.ollama", kSecAttrAccount as String: "cloud"]
+        SecItemDelete(query as CFDictionary)
+    }
     struct Failure: LocalizedError {
         let status: OSStatus
         var errorDescription: String? { "Keychain operation failed (\(status))" }

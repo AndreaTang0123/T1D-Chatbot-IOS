@@ -1,0 +1,336 @@
+{
+  "execution": "deterministic-fallback-tests",
+  "liveFoundationModelExecuted": false,
+  "manualToneReview": "not evaluated",
+  "results": [
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "AC854BC5-FDEE-461D-ABCF-5488353C0B72",
+      "latencyMilliseconds": 0.082834,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "\u6211\u4eca\u5929\u597d\u7d2f",
+      "regressionCaseID": "zh-tired",
+      "response": "\u542c\u8d77\u6765\u4eca\u5929\u771f\u7684\u5f88\u7d2f\uff0c\u6211\u5728\u8fd9\u91cc\u966a\u4f60\u3002\u4e00\u5929\u4e0d\u987a\u5229\u5e76\u4e0d\u80fd\u5b9a\u4e49\u4f60\u3002",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [
+        "glucose"
+      ],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "68D744BB-962A-4448-A4C1-D5714E6D798D",
+      "latencyMilliseconds": 0.064167,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "\u8840\u7cd6\u591a\u5c11\uff1f",
+      "regressionCaseID": "zh-glucose",
+      "response": "\u6700\u8fd1\u6d4b\u91cf\u662f120 mg/dL\uff0c\u6765\u81ea0\u5206\u949f\u524d\u3002",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [
+        "forecast",
+        "glucose",
+        "insulin"
+      ],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "DF7E3AC1-F3C4-476C-9B4C-F3F387E9DF49",
+      "latencyMilliseconds": 0.115041,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "\u4e3a\u4ec0\u4e48\u996d\u540e\u4e00\u76f4\u9ad8\uff1f",
+      "regressionCaseID": "zh-meal",
+      "response": "\u53ef\u89c1\u8bb0\u5f55\u91cc\u6ca1\u6709\u6700\u8fd1\u7684bolus\uff0c\u8fd9\u4e0d\u4ee3\u8868\u6ca1\u6709\u8f93\u6ce8\u80f0\u5c9b\u7d20\u3002",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "8D68AA5F-27E8-4F65-9720-86A8FC4DAFFB",
+      "latencyMilliseconds": 0.071542,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "\u6211\u521a\u8df3\u5b8c\u821e",
+      "regressionCaseID": "zh-dance",
+      "response": "\u8df3\u5b8c\u821e\u5566\uff0c\u6211\u5728\u542c\u3002",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "78392783-8A12-43C3-85F3-987FF6621554",
+      "latencyMilliseconds": 0.103584,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "\u6211\u4e00\u5c0f\u65f6\u540e\u8981\u4e0a\u8bfe",
+      "regressionCaseID": "zh-class",
+      "response": "\u6211\u542c\u5230\u4e86\uff0c\u6211\u5728\u8fd9\u91cc\u966a\u4f60\u3002",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "B883A8BD-91DA-4A06-A149-82E52B82D0A9",
+      "latencyMilliseconds": 0.130875,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "\u6211\u89c9\u5f97\u6211\u4eca\u5929\u63a7\u5236\u5f97\u5f88\u5dee",
+      "regressionCaseID": "zh-burnout",
+      "response": "\u542c\u8d77\u6765\u4eca\u5929\u771f\u7684\u5f88\u7d2f\uff0c\u6211\u5728\u8fd9\u91cc\u966a\u4f60\u3002\u4e00\u5929\u4e0d\u987a\u5229\u5e76\u4e0d\u80fd\u5b9a\u4e49\u4f60\u3002",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "34079C8A-3AAD-468B-BE98-381DF1BDEC48",
+      "latencyMilliseconds": 0.224167,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "I feel like I messed up again",
+      "regressionCaseID": "en-burnout",
+      "response": "That sounds like a lot to carry; I'm here with you. A difficult day doesn't define you.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [
+        "glucose"
+      ],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "B04DA484-4925-4281-A698-EC9F356A97C9",
+      "latencyMilliseconds": 0.138375,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "What is my glucose?",
+      "regressionCaseID": "en-glucose",
+      "response": "Your latest measurement is 120 mg/dL from 0 minutes ago.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "9192DE61-385C-4DE3-B0A9-BA85B3AB7E77",
+      "latencyMilliseconds": 0.172042,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "I just finished ballet",
+      "regressionCaseID": "en-ballet",
+      "response": "Got it; I'm here with you.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    },
+    {
+      "allowedTools": [],
+      "availability": "modelNotReady",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "fake-model.v1",
+      "id": "0A029D18-129C-43AD-BC88-6B6074D61A7E",
+      "latencyMilliseconds": 0.234708,
+      "mode": "Local fallback \u00b7 modelNotReady",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "Why do I keep going low at night?",
+      "regressionCaseID": "en-overnight",
+      "response": "I'm here with you, and I'm listening.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2027-01-15T08:00:00Z",
+      "timestamp": "2027-01-15T08:00:00Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v1"
+    }
+  ],
+  "suite": "joe.persona-regression.v1"
+}

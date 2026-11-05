@@ -1,5 +1,6 @@
 import SwiftUI
 import Charts
+import UIKit
 import JoeCore
 
 struct RootView: View {
@@ -91,7 +92,7 @@ struct DashboardView: View {
                         .frame(height: 230)
                 } else {
                     Chart {
-                        RuleMark(y: .value("Low reference", 70)).foregroundStyle(.pink.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
+                        RuleMark(y: .value("Low reference", SafetyPolicy().lowGlucose)).foregroundStyle(.pink.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
                         RuleMark(y: .value("High reference", 180)).foregroundStyle(.orange.opacity(0.7)).lineStyle(StrokeStyle(lineWidth: 1, dash: [4]))
                         ForEach(visible) { sample in
                             PointMark(x: .value("Time", sample.timestamp), y: .value("mg/dL", sample.glucose))
@@ -196,8 +197,20 @@ struct AssistantView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
-                        Label("Your on-device companion", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary)
+                        Label("Joe · Apple on-device model", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
+                        TimelineView(.periodic(from: .now, by: 30)) { timeline in
+                            let decision = state.safetyDecision(at: timeline.date)
+                            switch decision {
+                            case .urgentLow, .urgentHigh, .forecastRisk:
+                                let text = ExplanationFallback().requiredResponse(decision: decision, userText: "", snapshot: state.assistantSnapshot(at: timeline.date)) ?? ""
+                                Label(text, systemImage: "exclamationmark.circle.fill")
+                                    .font(.footnote).foregroundStyle(.orange).padding(12)
+                                    .background(Color.orange.opacity(0.1), in: RoundedRectangle(cornerRadius: 14))
+                                    .accessibilityLabel("Current safety status: " + text)
+                            default: EmptyView()
+                            }
+                        }
                         ForEach(state.messages) { message in messageBubble(message).id(message.id) }
                         if state.isAnswering {
                             HStack(spacing: 8) { ProgressView(); Text("Joe is thinking…").font(.subheadline).foregroundStyle(.secondary) }
@@ -215,12 +228,13 @@ struct AssistantView: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Joe")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { Button { state.speech.stop() } label: { Image(systemName: "speaker.slash") }.accessibilityLabel("Stop reading aloud") }
+            .toolbar { Button { state.speech.stop() } label: { Image(systemName: state.speech.isSpeaking ? "speaker.wave.2.fill" : "speaker.slash") }.accessibilityLabel("Stop reading aloud") }
             .onChange(of: state.voiceInput.transcript) { _, text in
                 guard !text.isEmpty else { return }
                 question = voicePrefix.isEmpty ? text : voicePrefix + " " + text
             }
-            .onDisappear { isHolding = false; state.voiceInput.cancel(); state.speech.stop() }
+            .task { state.assistant.prewarm() }
+            .onDisappear { state.assistant.releasePrewarm(); isHolding = false; state.voiceInput.cancel(); state.speech.stop() }
         }
     }
     private func messageBubble(_ message: ChatMessage) -> some View {
@@ -231,6 +245,7 @@ struct AssistantView: View {
                 Text(message.text).textSelection(.enabled).font(.body)
                 HStack {
                     Text(message.timestamp.formatted(date: .omitted, time: .shortened)).font(.caption2)
+                    if let mode = message.mode { Text(mode).font(.caption2).lineLimit(2) }
                     if fromJoe {
                         Spacer()
                         Button { state.voiceInput.cancel(); state.speech.speak(message.text) } label: { Image(systemName: "speaker.wave.2") }
@@ -250,31 +265,21 @@ struct AssistantView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack {
                         ForEach(["My glucose", "Explain my forecast", "My lifestyle context"], id: \.self) { text in
-                            Button(text) { send(text) }.buttonStyle(.bordered).disabled(state.isAnswering || voiceBusy)
+                            Button(text) { send(text) }.buttonStyle(.bordered).disabled(state.isAnswering || state.isRunningPersonaRegression || voiceBusy)
                         }
                     }
                 }
             }
-            if let message = state.voiceInput.message { Text(message).font(.caption).foregroundStyle(.orange).frame(maxWidth: .infinity, alignment: .leading) }
+            if let message = state.voiceInput.message ?? state.speech.message { Text(message).font(.caption).foregroundStyle(.orange).frame(maxWidth: .infinity, alignment: .leading) }
             HStack(alignment: .bottom, spacing: 10) {
-                Image(systemName: state.voiceInput.isRecording ? "waveform" : "mic.fill")
-                    .font(.title3).foregroundStyle(state.voiceInput.isRecording ? Color.white : Color.teal)
+                HoldToTalkButton(isRecording: state.voiceInput.isRecording,
+                                 enabled: !state.isAnswering && !state.isRunningPersonaRegression && !state.voiceInput.isFinishing,
+                                 onPress: {
+                    guard !state.voiceInput.isPreparing, !state.voiceInput.isRecording else { return }
+                    isHolding = true; voicePrefix = question; inputFocused = false; state.speech.stop()
+                    state.voiceInput.press(locale: state.speechLocale)
+                }, onRelease: { isHolding = false; state.voiceInput.release() })
                     .frame(width: 46, height: 46)
-                    .background(state.voiceInput.isRecording ? Color.red : Color.teal.opacity(0.1), in: Circle())
-                    .contentShape(Circle())
-                    .gesture(DragGesture(minimumDistance: 0).onChanged { _ in
-                        guard !isHolding, !state.isAnswering, !state.voiceInput.isFinishing else { return }
-                        isHolding = true; voicePrefix = question; inputFocused = false; state.speech.stop()
-                        Task { guard isHolding else { return }; await state.voiceInput.press() }
-                    }.onEnded { _ in isHolding = false; state.voiceInput.release() })
-                    .accessibilityElement().accessibilityLabel("Hold to talk")
-                    .accessibilityAddTraits(.isButton)
-                    .accessibilityAction(named: Text("Start or stop dictation")) {
-                        if state.voiceInput.isRecording { state.voiceInput.release() }
-                        else if !state.isAnswering && !voiceBusy {
-                            voicePrefix = question; state.speech.stop(); Task { await state.voiceInput.press() }
-                        }
-                    }
                 TextField("Message Joe…", text: $question, axis: .vertical)
                     .lineLimit(1...5).focused($inputFocused).padding(12)
                     .background(Color(.tertiarySystemFill), in: RoundedRectangle(cornerRadius: 22))
@@ -282,8 +287,8 @@ struct AssistantView: View {
                 Button { send(question) } label: {
                     Image(systemName: "arrow.up").font(.title3.weight(.semibold)).foregroundStyle(.white)
                         .frame(width: 44, height: 44).background(Color.teal, in: Circle())
-                }.disabled(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isAnswering || voiceBusy)
-                    .opacity(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isAnswering || voiceBusy ? 0.4 : 1)
+                }.disabled(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isAnswering || state.isRunningPersonaRegression || voiceBusy)
+                    .opacity(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isAnswering || state.isRunningPersonaRegression || voiceBusy ? 0.4 : 1)
                     .accessibilityLabel("Send message")
             }
             Text(state.voiceInput.isPreparing ? "Preparing microphone…" : state.voiceInput.isRecording ? "Listening… Release to finish" : state.voiceInput.isFinishing ? "Finishing transcription…" : "Hold to talk · Review, then send")
@@ -292,7 +297,7 @@ struct AssistantView: View {
     }
     private var voiceBusy: Bool { state.voiceInput.isPreparing || state.voiceInput.isRecording || state.voiceInput.isFinishing }
     private func send(_ text: String) {
-        guard !state.isAnswering, !voiceBusy, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !state.isAnswering, !state.isRunningPersonaRegression, !voiceBusy, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let outgoing = text; question = ""; inputFocused = false
         Task { await state.ask(outgoing) }
     }
@@ -355,6 +360,36 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section("Joe conversation model") {
+                    LabeledContent("Model", value: "Apple on-device Foundation Model")
+                    Text(state.assistant.availability).font(.footnote).foregroundStyle(.secondary)
+                    Text("Joe's companion persona is supplied through LanguageModelSession instructions. Recent messages and local data tools provide context. Conversation stays on your iPhone; no API key or Mac server is required.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Persona regression · Synthetic data") {
+                    Text("Runs the architecture plan's ten English/Chinese examples using an isolated synthetic reading. Results are stored separately from your chat and CGM data; no real health readings are used. Review tone and empathy manually.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button(state.isRunningPersonaRegression ? "Running regression…" : "Run persona regression") {
+                        state.startPersonaRegression()
+                    }.disabled(state.isAnswering || state.isRunningPersonaRegression)
+                    if state.isRunningPersonaRegression { Button("Cancel regression") { state.cancelPersonaRegression() } }
+                    if let status = state.regressionStatus { Text(status).font(.footnote) }
+                }
+                Section("Voice") {
+                    Picker("Voice input language", selection: $state.speechLocale) {
+                        Text("English (US)").tag("en-US")
+                        Text("Chinese (Mandarin)").tag("zh-CN")
+                    }.disabled(state.voiceInput.isRecording || state.voiceInput.isPreparing || state.voiceInput.isFinishing)
+                    Toggle("Read Joe's replies automatically", isOn: $state.autoSpeak)
+                    Text("Hold to record, release to finish, then review and send. Recognition requires local support for the selected language. Playback follows your iPhone media volume and current audio route.")
+                        .font(.caption).foregroundStyle(.secondary)
+                    Button("Test sound") { state.voiceInput.cancel(); state.speech.testSound() }
+                    Button("Test voice") { state.voiceInput.cancel(); state.speech.speak("Hi, I'm Joe. This voice is generated on your iPhone.") }
+                    LabeledContent("Playback", value: state.speech.status)
+                    Text(state.speech.outputDescription).font(.caption).foregroundStyle(.secondary)
+                    Text("If Test sound is audible but Test voice is not, check downloaded system voices. If neither is audible, raise media volume and check the displayed output device.").font(.caption).foregroundStyle(.secondary)
+                    if let message = state.speech.message { Text(message).font(.caption).foregroundStyle(.orange) }
+                }
                 Section("Direct Nightscout connection") {
                     TextField("https://your-nightscout.example.com", text: $url).textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.URL)
                     Picker("Authentication", selection: $auth) { Text("Read-only access token").tag(NightscoutCredentials.Auth.token); Text("API secret SHA-1").tag(NightscoutCredentials.Auth.secretSHA1) }
@@ -373,12 +408,12 @@ struct SettingsView: View {
                 Section("Research data · Stored locally") {
                     Button("Prepare research JSON export") { state.export() }.disabled(state.isRefreshing)
                     if let exportURL = state.exportURL { ShareLink("Share export", item: exportURL) }
-                    Text("Exports contain health records, categories, forecasts, and errors, but no Nightscout credentials or calendar titles. Choose where to save the file.").font(.caption).foregroundStyle(.secondary)
-                    Button("Clear local data and credentials", role: .destructive) { eraseConfirmation = true }.disabled(state.isRefreshing || state.isAnswering)
+                    Text("Exports contain health records, conversations, versioned safety logs, regression results, forecasts and errors. They exclude Nightscout credentials and calendar titles. Choose where to save the file.").font(.caption).foregroundStyle(.secondary)
+                    Button("Clear local data and credentials", role: .destructive) { eraseConfirmation = true }.disabled(state.isRefreshing || state.isAnswering || state.isRunningPersonaRegression)
                 }
                 Section("About forecasts") {
                     Text("Forecasting pauses when the model is missing, data is stale, or history is insufficient. Deterministic explanations are used when Apple's on-device model is unavailable. Forecasts are for observational research, not treatment adjustments.")
-                    Text("Joe has no pump-control interface. Runtime use requires no Mac, Python server, Tailscale, Ollama, or cloud LLM.").font(.caption)
+                    Text("Joe has no pump-control interface. Conversation, speech, and forecasts run locally without a Mac server or cloud-model API key.").font(.caption)
                 }
             }.navigationTitle("Settings")
                 .confirmationDialog("Clear all local research data, places, and Nightscout credentials?", isPresented: $eraseConfirmation, titleVisibility: .visible) {
@@ -386,4 +421,48 @@ struct SettingsView: View {
                 }
         }
     }
+}
+
+
+/// UIKit touch tracking keeps hold/release events stable while SwiftUI redraws the composer.
+struct HoldToTalkButton: UIViewRepresentable {
+    let isRecording: Bool
+    let enabled: Bool
+    let onPress: () -> Void
+    let onRelease: () -> Void
+    func makeCoordinator() -> Coordinator { Coordinator(onPress: onPress, onRelease: onRelease) }
+    func makeUIView(context: Context) -> UIButton {
+        let button = HoldCaptureButton(type: .custom)
+        button.onActivate = { context.coordinator.toggle() }
+        button.layer.cornerRadius = 23
+        button.accessibilityLabel = "Hold to talk"
+        button.accessibilityHint = "Hold to dictate, then release. With VoiceOver, activate to start or stop."
+        button.addTarget(context.coordinator, action: #selector(Coordinator.down), for: .touchDown)
+        button.addTarget(context.coordinator, action: #selector(Coordinator.up), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+        button.accessibilityCustomActions = [UIAccessibilityCustomAction(name: "Start or stop dictation", target: context.coordinator, selector: #selector(Coordinator.toggle))]
+        return button
+    }
+    func updateUIView(_ button: UIButton, context: Context) {
+        context.coordinator.onPress = onPress; context.coordinator.onRelease = onRelease
+        button.isEnabled = enabled
+        button.setImage(UIImage(systemName: isRecording ? "waveform" : "mic.fill", withConfiguration: UIImage.SymbolConfiguration(pointSize: 21)), for: .normal)
+        button.tintColor = isRecording ? .white : .systemTeal
+        button.backgroundColor = isRecording ? .systemRed : UIColor.systemTeal.withAlphaComponent(0.12)
+        button.alpha = enabled ? 1 : 0.4
+    }
+    static func dismantleUIView(_ uiView: UIButton, coordinator: Coordinator) { coordinator.up() }
+    final class Coordinator: NSObject {
+        var onPress: () -> Void
+        var onRelease: () -> Void
+        private var held = false
+        init(onPress: @escaping () -> Void, onRelease: @escaping () -> Void) { self.onPress = onPress; self.onRelease = onRelease }
+        @objc func down() { guard !held else { return }; held = true; onPress() }
+        @objc func up() { guard held else { return }; held = false; onRelease() }
+        @objc func toggle() -> Bool { if held { up() } else { down() }; return true }
+    }
+}
+
+final class HoldCaptureButton: UIButton {
+    var onActivate: (() -> Bool)?
+    override func accessibilityActivate() -> Bool { onActivate?() ?? false }
 }

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        A11000000000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000002 /* Assets.xcassets */; };
 		067D625B02E86E34509A5FF1 /* JoeMobile/Storage/LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB56896CE14105DE93E6219 /* JoeMobile/Storage/LocalStore.swift */; };
 		0A58BE0013B8AABC29223FAD /* JoeMobile/Services/HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A48DF3C7DD09F6E1FFBB95 /* JoeMobile/Services/HealthKitService.swift */; };
 		357C781C3DAFB313F212E5B2 /* JoeMobile/Services/SpeechService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D3509E40FD1D6059D5F2BBF /* JoeMobile/Services/SpeechService.swift */; };
@@ -24,6 +25,7 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+        A11000000000000000000002 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = JoeMobile/Resources/Assets.xcassets; sourceTree = "<group>"; };
 		150F7023C9D4602BC1A77688 /* JoeMobile/App/AppState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoeMobile/App/AppState.swift; sourceTree = "<group>"; };
 		1B3AE69495B13355B02822B8 /* JoeMobile/Services/CalendarService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoeMobile/Services/CalendarService.swift; sourceTree = "<group>"; };
 		2294A6BD8D833E10D3F3E6F1 /* JoeMobile/Services/LocationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JoeMobile/Services/LocationService.swift; sourceTree = "<group>"; };
@@ -55,6 +57,7 @@
 		EC6AE75C017423A0C5A951A8 = {
 			isa = PBXGroup;
 			children = (
+                A11000000000000000000002 /* Assets.xcassets */,
 				150F7023C9D4602BC1A77688 /* JoeMobile/App/AppState.swift */,
 				DDBCE99E685727C1B359AD53 /* JoeMobile/App/JoeMobileApp.swift */,
 				3886D5FB4A52242B3A089452 /* JoeMobile/Models/StoredRecords.swift */,
@@ -141,6 +144,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                A11000000000000000000001 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -173,7 +177,8 @@
 		6C7EFF6369083C8E1F2B1994 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = JoeMobile/Resources/JoeMobile.entitlements;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CODE_SIGN_ENTITLEMENTS = JoeMobile/Resources/JoeMobile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LK5G7X4658;
@@ -208,7 +213,8 @@
 		DD75E2CB1C510A828AC72D96 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = JoeMobile/Resources/JoeMobile.entitlements;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+                CODE_SIGN_ENTITLEMENTS = JoeMobile/Resources/JoeMobile.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = LK5G7X4658;

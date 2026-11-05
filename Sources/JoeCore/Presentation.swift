@@ -50,3 +50,22 @@ public extension Treatment {
         events.filter { $0.isBolus && $0.timestamp <= now }.max { $0.timestamp < $1.timestamp }
     }
 }
+
+/// A bounded local conversation turn for Apple's on-device model.
+public struct JoeChatTurn: Codable, Sendable, Equatable {
+    public let role: String
+    public let content: String
+    public init(role: String, content: String) { self.role = role; self.content = content }
+}
+
+/// Token invalidation prevents late authorization/recognition callbacks from restarting canceled input.
+public struct VoiceCaptureGate: Sendable {
+    public private(set) var token = UUID()
+    public private(set) var isHeld = false
+    public init() {}
+    public mutating func begin() -> UUID { token = UUID(); isHeld = true; return token }
+    public mutating func release() { isHeld = false }
+    public mutating func cancel() { isHeld = false; token = UUID() }
+    public func mayStart(_ id: UUID) -> Bool { id == token && isHeld }
+    public func accepts(_ id: UUID) -> Bool { id == token }
+}

@@ -7,7 +7,10 @@ struct ChatMessage: Identifiable {
     let id = UUID()
     let role: Role
     let text: String
-    let timestamp = Date()
+    let timestamp: Date
+    init(role: Role, text: String, timestamp: Date = Date(), mode: String? = nil) {
+        self.role = role; self.text = text; self.timestamp = timestamp; self.mode = mode
+    }
     var mode: String? = nil
 }
 
@@ -17,6 +20,7 @@ struct ChatMessage: Identifiable {
     let calendar = CalendarService()
     let location = LocationService()
     let assistant = AssistantService()
+    private let coordinator: AssistantCoordinator
     let speech = SpeechService()
     let voiceInput = SpeechInputService()
     private let nightscout = NightscoutClient()
@@ -38,6 +42,15 @@ struct ChatMessage: Identifiable {
     var messages: [ChatMessage] = [ChatMessage(role: .joe, text: "Hi, I'm Joe. Ask about your glucose, forecasts, or lifestyle context. You can type or hold the microphone to talk. Connect your data sources in Settings.")]
     var assistantMode = "Deterministic on-device explanation"
     var isAnswering = false
+    var isRunningPersonaRegression = false
+    @ObservationIgnored private var regressionTask: Task<Void, Never>?
+    var regressionStatus: String?
+    var autoSpeak = (UserDefaults.standard.object(forKey: "autoSpeak") as? Bool) ?? true {
+        didSet { UserDefaults.standard.set(autoSpeak, forKey: "autoSpeak") }
+    }
+    var speechLocale = UserDefaults.standard.string(forKey: "speechLocale") ?? "en-US" {
+        didSet { UserDefaults.standard.set(speechLocale, forKey: "speechLocale") }
+    }
     var matchedCount = 0
     var mae30: Double?
     var mae60: Double?
@@ -51,8 +64,17 @@ struct ChatMessage: Identifiable {
     }
     init(store: LocalStore) {
         self.store = store
+        self.coordinator = AssistantCoordinator(provider: assistant)
+        KeychainStore.removeLegacyConversationCredential()
         do { connected = try KeychainStore.load() != nil; try reload() }
         catch { syncError = "Unable to read local data or Keychain" }
+        do {
+            let recent = try store.assistantTurns(includeRegression: false).suffix(3)
+            if !recent.isEmpty {
+                messages = recent.flatMap { turn in [ChatMessage(role: .user, text: turn.question, timestamp: turn.timestamp),
+                    ChatMessage(role: .joe, text: turn.response, timestamp: turn.timestamp, mode: turn.mode)] }
+            }
+        } catch { warnings.append("Conversation history could not be restored.") }
         health.onChange = { [weak self] in Task { await self?.refresh() } }; health.observe()
     }
     func reload() throws {
@@ -121,15 +143,55 @@ struct ChatMessage: Identifiable {
         } catch let issue as DataIssue { forecast = nil; forecastStatus = issue.localizedDescription }
         catch { forecast = nil; forecastStatus = "Local processing failed: " + error.localizedDescription }
     }
+    func assistantSnapshot(at now: Date) -> AssistantSnapshot {
+        AssistantSnapshot(glucose: glucose.last, forecast: forecast, treatments: treatments,
+            context: currentContext ?? context, now: now, policy: SafetyPolicy(cgmStaleSeconds: staleMinutes*60),
+            nextEventCategory: calendarSnapshot.next, nextEventStart: calendarSnapshot.nextStart,
+            currentEventEnd: calendarSnapshot.currentEnd)
+    }
+    func safetyDecision(at now: Date) -> SafetyDecision {
+        let snapshot = assistantSnapshot(at: now)
+        return SafetyDecisionEngine(policy: snapshot.policy).evaluate(cgm: snapshot.currentGlucose, forecast: snapshot.forecastResult)
+    }
     func ask(_ text: String) async {
-        guard !isAnswering, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !isAnswering, !isRunningPersonaRegression, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         messages.append(ChatMessage(role: .user, text: question))
         isAnswering = true; defer { isAnswering = false }
-        let snapshot = AssistantSnapshot(glucose: glucose.last, forecast: forecast, treatments: treatments,
-                                         context: currentContext ?? context, now: Date(), staleAfter: staleMinutes*60)
-        reply = await assistant.answer(question, snapshot: snapshot); assistantMode = assistant.mode
+        let snapshot = assistantSnapshot(at: Date())
+        let history = messages.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
+        let turn = await coordinator.answer(question, snapshot: snapshot, history: history)
+        reply = turn.response; assistantMode = turn.mode
+        do { try store.save(assistantTurn: turn) }
+        catch { warnings.append("The response is shown, but its research log could not be saved.") }
         messages.append(ChatMessage(role: .joe, text: reply, mode: assistantMode))
+        if autoSpeak { voiceInput.cancel(); speech.speak(reply) }
+    }
+    func startPersonaRegression() {
+        guard !isAnswering, !isRunningPersonaRegression else { return }
+        regressionTask = Task { await runPersonaRegression() }
+    }
+    func cancelPersonaRegression() { regressionTask?.cancel() }
+    func runPersonaRegression() async {
+        guard !isAnswering, !isRunningPersonaRegression else { return }
+        isRunningPersonaRegression = true; speech.stop(); voiceInput.cancel()
+        defer { isRunningPersonaRegression = false; regressionTask = nil }
+        var generated = 0; var fallbacks = 0
+        for item in PersonaRegressionCase.all {
+            guard !Task.isCancelled else { regressionStatus = "Regression canceled."; return }
+            let now = Date()
+            // Synthetic data is isolated from clinical records, chat bubbles, forecasts, and audio.
+            let synthetic = AssistantSnapshot(glucose: GlucoseSample(id: "regression-only", timestamp: now, glucose: 120, direction: "Flat", receivedAt: now),
+                forecast: nil, treatments: [], context: nil, now: now)
+            let turn = await coordinator.answer(item.text, snapshot: synthetic,
+                history: [JoeChatTurn(role: "user", content: item.text)], regressionCaseID: item.id)
+            guard !Task.isCancelled else { regressionStatus = "Regression canceled."; return }
+            do { try store.save(assistantTurn: turn) }
+            catch { regressionStatus = "Regression log could not be saved."; return }
+            if turn.mode == "Apple on-device · Validated" { generated += 1 } else { fallbacks += 1 }
+            regressionStatus = "Completed \(generated + fallbacks)/\(PersonaRegressionCase.all.count) cases."
+        }
+        regressionStatus = "Complete: \(generated) validated model replies, \(fallbacks) fallbacks. Export research JSON for versions, safety decisions and rejection reasons. Tone/empathy still require manual review."
     }
     func export() {
         do {
@@ -139,9 +201,9 @@ struct ChatMessage: Identifiable {
         } catch { syncError = "Export failed" }
     }
     func erase() {
-        guard !isRefreshing, !isAnswering else { return }
+        guard !isRefreshing, !isAnswering, !isRunningPersonaRegression else { return }
         do {
-            try KeychainStore.delete(); try store.erase()
+            KeychainStore.removeLegacyConversationCredential(); try KeychainStore.delete(); try store.erase()
             health.disable(); UserDefaults.standard.set(false, forKey: "calendarEnabled"); location.forgetAll(); voiceInput.cancel(); speech.stop()
             if let exportURL { try? FileManager.default.removeItem(at: exportURL) }; exportURL = nil
             connected = false; glucose = []; treatments = []; context = nil; currentContext = nil; forecast = nil

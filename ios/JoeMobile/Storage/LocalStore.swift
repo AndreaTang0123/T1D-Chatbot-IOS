@@ -7,7 +7,7 @@ import JoeCore
     var context: ModelContext { container.mainContext }
     init() throws {
         let schema = Schema([StoredGlucose.self, StoredTreatment.self, StoredContext.self, StoredForecast.self,
-                             StoredProfile.self, StoredFeature.self])
+                             StoredProfile.self, StoredFeature.self, StoredAssistantTurn.self])
         let config = ModelConfiguration(schema: schema, cloudKitDatabase: .none)
         container = try ModelContainer(for: schema, configurations: [config])
         // Health records stay local and are protected while the device is locked before first unlock.
@@ -81,8 +81,17 @@ import JoeCore
         }
         try context.save()
     }
+    func save(assistantTurn: AssistantTurnRecord) throws {
+        do { context.insert(try StoredAssistantTurn(assistantTurn)); try context.save() }
+        catch { context.rollback(); throw error }
+    }
+    func assistantTurns(includeRegression: Bool = true) throws -> [AssistantTurnRecord] {
+        try context.fetch(FetchDescriptor<StoredAssistantTurn>(sortBy: [SortDescriptor(\.timestamp)]))
+            .filter { includeRegression || !$0.isRegression }
+            .map { try JSONDecoder().decode(AssistantTurnRecord.self, from: $0.payload) }
+    }
     func erase() throws {
-        try context.delete(model: StoredForecast.self); try context.delete(model: StoredFeature.self)
+        try context.delete(model: StoredAssistantTurn.self); try context.delete(model: StoredForecast.self); try context.delete(model: StoredFeature.self)
         try context.delete(model: StoredContext.self); try context.delete(model: StoredGlucose.self)
         try context.delete(model: StoredTreatment.self); try context.delete(model: StoredProfile.self)
         try context.save()
@@ -94,6 +103,7 @@ import JoeCore
             var treatments: [Treatment]
             var contexts: [LifestyleContext]
             var forecasts: [Evaluation]
+            var assistantTurns: [AssistantTurnRecord]
         }
         struct Evaluation: Encodable {
             var forecast: Forecast
@@ -104,6 +114,6 @@ import JoeCore
                        actual30: record.actual30, actual60: record.actual60, error30: record.error30, error60: record.error60)
         }
         let encoder = JSONEncoder(); encoder.dateEncodingStrategy = .iso8601; encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        return try encoder.encode(Export(schema: FeatureRow.schema, glucose: glucose(), treatments: treatments(), contexts: contexts(), forecasts: rows))
+        return try encoder.encode(Export(schema: FeatureRow.schema, glucose: glucose(), treatments: treatments(), contexts: contexts(), forecasts: rows, assistantTurns: assistantTurns()))
     }
 }

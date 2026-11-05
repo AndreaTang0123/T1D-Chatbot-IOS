@@ -10,7 +10,7 @@ public struct GlucoseSample: Codable, Sendable, Equatable, Identifiable {
         self.id = id; self.timestamp = timestamp; self.glucose = glucose
         self.direction = direction; self.receivedAt = receivedAt
     }
-    public func isFresh(at now: Date, threshold: TimeInterval = 900) -> Bool {
+    public func isFresh(at now: Date, threshold: TimeInterval = SafetyPolicy().cgmStaleSeconds) -> Bool {
         (40...400).contains(glucose) && timestamp <= now && now.timeIntervalSince(timestamp) <= threshold
     }
 }

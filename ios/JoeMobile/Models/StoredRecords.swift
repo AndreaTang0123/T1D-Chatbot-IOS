@@ -59,3 +59,14 @@ import JoeCore
         payload = try JSONEncoder().encode(row)
     }
 }
+
+@Model final class StoredAssistantTurn {
+    @Attribute(.unique) var id: UUID
+    var timestamp: Date
+    var isRegression: Bool
+    var payload: Data
+    init(_ turn: AssistantTurnRecord) throws {
+        id = turn.id; timestamp = turn.timestamp; isRegression = turn.regressionCaseID != nil
+        payload = try JSONEncoder().encode(turn)
+    }
+}

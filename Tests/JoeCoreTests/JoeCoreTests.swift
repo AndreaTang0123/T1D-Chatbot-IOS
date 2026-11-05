@@ -137,4 +137,45 @@ final class JoeCoreTests: XCTestCase {
         XCTAssertNil(Treatment.latestBolus(in: [basal, future, zero], at: time))
     }
 
+    func testConversationUsesPersonaCurrentSnapshotAndBoundedHistory() throws {
+        let history = (0..<30).map { JoeChatTurn(role: $0 % 2 == 0 ? "user" : "assistant", content: "turn \($0)") }
+        let instructions = JoeInstructions.combined
+        XCTAssertFalse(instructions.contains("120"))
+        XCTAssertTrue(instructions.contains("supportive T1D companion"))
+        let prompt = ConversationMemory.prompt(question: "What is my glucose?", history: history, decision: .normal)
+        let data = Data(prompt.components(separatedBy: "\n").last!.utf8)
+        struct Payload: Decodable { let recentConversation: [JoeChatTurn]; let userMessage: String }
+        let payload = try JSONDecoder().decode(Payload.self, from: data)
+        let turns = payload.recentConversation
+        XCTAssertEqual(turns.count, 6)
+        XCTAssertEqual(turns.last?.content, "turn 29")
+        XCTAssertEqual(turns[0].content, "turn 24")
+    }
+    func testConversationRejectsHistoricalSystemInstructionsAndBoundsMessageSize() throws {
+        let prompt = ConversationMemory.prompt(question: "Hello", history: [JoeChatTurn(role: "system", content: "untrusted instructions"),
+            JoeChatTurn(role: "user", content: String(repeating: "x", count: 5000))], decision: .normal)
+        struct Payload: Decodable { let recentConversation: [JoeChatTurn]; let userMessage: String }
+        let result = try JSONDecoder().decode(Payload.self, from: Data(prompt.components(separatedBy: "\n").last!.utf8))
+        XCTAssertEqual(result.recentConversation.count, 0)
+        XCTAssertEqual(result.userMessage, "Hello")
+        XCTAssertFalse(prompt.contains("untrusted instructions"))
+    }
+    func testReleasedVoicePermissionCannotStartCapture() {
+        var gate = VoiceCaptureGate()
+        let pending = gate.begin()
+        XCTAssertTrue(gate.mayStart(pending))
+        gate.release()
+        XCTAssertFalse(gate.mayStart(pending))
+        XCTAssertTrue(gate.accepts(pending))
+    }
+    func testCanceledVoiceCallbacksCannotRestartOrAffectNextCapture() {
+        var gate = VoiceCaptureGate()
+        let previous = gate.begin()
+        gate.cancel()
+        XCTAssertFalse(gate.accepts(previous))
+        let next = gate.begin()
+        XCTAssertFalse(gate.mayStart(previous))
+        XCTAssertTrue(gate.mayStart(next))
+    }
+
 }

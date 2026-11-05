@@ -2,7 +2,7 @@ import Foundation
 
 public enum FeatureBuilder {
     public static func build(samples: [GlucoseSample], treatments: [Treatment], context: LifestyleContext?,
-                             at now: Date, staleAfter: TimeInterval = 900) throws -> FeatureRow {
+                             at now: Date, staleAfter: TimeInterval = SafetyPolicy().cgmStaleSeconds) throws -> FeatureRow {
         let valid = samples.filter { $0.timestamp <= now && $0.glucose.isFinite && (40...400).contains($0.glucose) }
             .sorted { $0.timestamp < $1.timestamp }
         guard let latest = valid.last else { throw DataIssue.noGlucose }

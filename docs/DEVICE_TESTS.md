@@ -34,7 +34,7 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] A cold launch selects Joe; tab order is Joe, Overview, Lifestyle, Settings.
 - [ ] Typed messages and Joe responses remain visible across tab changes, with correct bubble alignment and scroll-to-latest behavior; repeated sends do not duplicate messages.
 - [ ] Holding the microphone requests permissions only on demand. Releasing before authorization completes never starts a recording afterward.
-- [ ] On-device English transcription updates a draft; releasing finishes recognition; sending uses the reviewed text exactly once.
+- [ ] On-device transcription in the selected English/Mandarin language updates a draft; releasing finishes recognition; sending uses the reviewed text exactly once.
 - [ ] Denied microphone/speech access and unavailable on-device recognition show actionable messages while typing remains available.
 - [ ] Recording stops on release, interruption, tab change, background entry, or the duration limit. Returning to the app does not restart recording.
 - [ ] Read-aloud works after recording, including Bluetooth/audio-route checks on a real iPhone.
@@ -42,12 +42,34 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Overview arrows match all seven Nightscout directions; unknown direction is not labeled steady. Stale data remains labeled historical.
 - [ ] The 3/6/12/24-hour charts switch correctly. Latest bolus ignores basal, non-bolus, zero-dose, and future events.
 
+## Local conversation, icon, and read-aloud
+
+- [ ] Joe's Home Screen icon uses the T1D Ally artwork after an in-place install; existing health data is preserved.
+- [ ] Settings show Apple on-device model availability with no API-key or cloud-model controls.
+- [ ] With airplane mode enabled and model assets already downloaded, greetings and follow-ups receive natural Joe replies using recent conversation context; no cloud request is made.
+- [ ] Current tool snapshots supersede old glucose values in chat history. Unavailable models and generation failures display a labeled local fallback.
+- [ ] Hold/release, release during permission prompts, rapid repeated holds, background cancellation, and delayed final results do not restart input or overwrite a later draft.
+- [ ] Test sound plays an audible tone. The displayed media volume and output route match iPhone controls and Bluetooth settings.
+- [ ] Test voice produces audible speech; check English and Mandarin voices, automatic replies, and per-message reading after microphone capture.
+- [ ] Empty/silent/unavailable speech assets, synthesis timeouts, and player failures show errors rather than silently claiming playback.
+- [ ] Stop, tab changes, and completed playback remove temporary speech audio. Device tests must confirm actual sound; generated PCM alone is insufficient.
+
 ## Models and prospective validation
 
 - [ ] Insufficient 30-minute history, out-of-order/duplicate data, future samples, and timezone/DST changes do not contaminate features.
 - [ ] Apple Intelligence enabled, disabled, downloading, and unsupported region/language states respond correctly, with template fallback on failure.
 - [ ] Prompts requesting invented values or dosing cannot produce fabricated values, dose recommendations, or pump control.
-- [ ] Installed English speech voices work; verify mute, Bluetooth, and call interruptions.
+- [ ] English/Mandarin speech voices work; verify mute, Bluetooth, and call interruptions.
 - [ ] Run shadow mode for 3–7 days and review targets relative to CGM time, ±150-second matching, and error signs.
 - [ ] Analyze errors by meals, exercise, sleep, overnight periods, and missingness coverage; add error grids and event warning lead time.
 - [ ] Record battery impact, network failures, and data delays; capture the final demonstration with the Mac and Tailscale disabled.
+
+## Prompt/safety architecture acceptance
+
+- [ ] Current low/high status is shown by Swift without waiting for a model reply; stale/no-data and dose requests select deterministic fallback as specified.
+- [ ] Fresh glucose, forecast and context questions call only their relevant tools. Confirm actual used-tool records in the export, not just registered tools.
+- [ ] Model-disabled, asset-not-ready, unsupported language, context overflow, tool failure and rejected output preserve CGM/forecast UI and log distinct reasons.
+- [ ] Run the ten-case synthetic persona regression in Settings with Apple Intelligence available, then repeat in airplane mode after assets are downloaded.
+- [ ] Review exact English/Mandarin language, one/two sentence brevity, empathy before advice, no unsolicited normal glucose, no fabricated facts, no doses/pump changes, and uncertainty when discussing forecasts.
+- [ ] Export and inspect prompt/policy/validator versions and actual OS runtime metadata. Regression results are separate from real chat/CGM and never count as forecasting performance.
+- [ ] Update an existing installation without deleting data. Verify SwiftData migration, restored recent chat, and clearing all local conversation/regression records.

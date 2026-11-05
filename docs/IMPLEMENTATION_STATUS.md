@@ -13,14 +13,14 @@ Implementation began in a standalone repository containing only a README and imp
 | Features | UTC five-minute buckets, causal CGM grid, separate missingness flags, and Python/Swift fixtures |
 | Forecast | Core ML CPU inference at 30/60 minutes; manifest/input/output validation; stops when model, history, or fresh CGM is unavailable |
 | Evaluation | Forecast logs, subsequent ±150-second CGM matching, errors, MAE display, and export |
-| Assistant / TTS | Foundation Models availability handling, four read-only tools, structured explanation focus, deterministic template fallback, text input, installed English speech voices, and hold-to-talk on-device English transcription with editable drafts |
+| Assistant / TTS | Foundation Models availability handling, four read-only tools, Joe persona in session instructions, bounded multi-turn natural conversation, deterministic fallback, text input, English/Mandarin speech voices, and hold-to-talk on-device transcription with editable drafts |
 | Training | Coverage report, chronological 70/15/15 split with boundary purging, A–D Ridge experiments, persistence, Random Forest comparison, Core ML export, and numerical fixtures |
 | Background | Foreground, manual, BGAppRefresh, and HealthKit observer updates; cold-start initialization; no fixed refresh guarantee |
 
 ## Verified
 
 - `swift build` successfully builds JoeCore.
-- `python3 scripts/check_core.py`: 16 checks pass, including four Python/Swift numerical fixtures.
+- `python3 scripts/check_core.py`: 20 checks pass, including four Python/Swift numerical fixtures.
 - Python 3.11: all six `python -m unittest -v test_pipeline.py` checks pass.
 - Training → Core ML conversion → local CPU prediction parity passes using temporary synthetic data. Test models are deleted afterward and are not bundled in the app.
 - The app launches in an iOS 27.2 simulator with Joe selected by default; the initial chat, composer, and tab order were visually checked. Voice capture and actual device layout remain pending.
@@ -29,11 +29,24 @@ Implementation began in a standalone repository containing only a README and imp
 
 **The full iOS app builds successfully with Xcode 27.2 for generic iOS device and simulator targets with code signing disabled.** This build includes SwiftData and Foundation Models macro expansion. The `LocalStore` FileManager argument label was corrected from `atPath:` to `ofItemAtPath:`. Signed installation and device UI validation remain pending.
 
-Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run. With full Xcode available, all 16 XCTest tests now pass.
+Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run. With full Xcode available, all 43 XCTest tests now pass.
 
 ## Chat and navigation update
 
 Joe is the default tab and displays a session conversation with a bottom text/voice composer. Hold-to-talk transcribes locally to an editable draft; sending remains explicit. HealthKit, calendar, and location setup live in Settings. Lifestyle displays only current data. Overview uses Nightscout trend arrows and selectable 3/6/12/24-hour dot charts; its pump card shows only the latest bolus, excluding basal and future events. New core tests cover trend mappings and bolus selection. Microphone permissions, recording/release, audio interruptions, and real-device layouts require device acceptance testing.
+
+## Icon, local conversation, and audio update
+
+- The supplied T1D Ally PNG is resized to an opaque 1024×1024 AppIcon asset; both build configurations select it.
+- Apple `SystemLanguageModel.default` generates natural replies. The browser-inspired Joe persona is passed directly as `LanguageModelSession` instructions, with static instructions and up to four selected local tools. Swift safety gating and post-generation validation surround a fresh session with selected structured tools. Recent history and user-reported memory are bounded; current facts are not embedded in instructions. No cloud model or API key is used.
+- Cloud settings and the cloud network client were removed following the user's clarification. Only a delete-only Keychain migration remains to remove a previously saved prototype credential.
+- Voice input uses stable UIKit touch tracking, token-guarded authorization/callbacks, and a five-second finalization window. Settings provide English/Mandarin selection and automatic reading.
+- Read-aloud now writes local synthesized PCM into a temporary audio file, rejects empty/silent synthesis, and plays through `AVAudioPlayer`. Settings expose a tone test, voice test, playback state, output route, and media volume. Temporary speech is removed when stopped or finished.
+- Core tests cover persona placement, bounded conversation prompts, and canceled/released input. `scripts/check_speech_renderer.py` checks PCM persistence, silent/empty rejection, and cancellation without playing sound. Natural model responses and audible output still require device acceptance testing.
+
+## Safety/prompt architecture plan
+
+The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/prewarming, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 43 XCTest checks pass; real Foundation Model persona quality still needs on-device generation and manual review. The committed regression report is explicitly a deterministic/fake-provider run.
 
 ## Remaining work
 
@@ -62,8 +75,8 @@ flowchart TD
     ML --> LOG[Forecasts / Subsequent actual-value matching]
     LOG --> DB
     DB --> TOOLS[Four local read-only tools]
-    TOOLS --> FM[Apple on-device model selects explanation focus]
-    FM --> OUT[Tool templates / Deterministic fallback]
+    TOOLS --> FM[Apple on-device conversation / Joe instructions]
+    FM --> OUT[Natural reply / Labeled local fallback]
     OUT --> UI[SwiftUI / Local TTS]
 ```
 
