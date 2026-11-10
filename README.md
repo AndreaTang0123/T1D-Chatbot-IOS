@@ -1,12 +1,12 @@
 # Joe — Standalone iOS Research App
 
-A native SwiftUI iPhone app with a direct **iPhone → Nightscout HTTPS** connection. Context collection, storage, Core ML inference, Apple Foundation Models, speech recognition, and speech synthesis run on the phone. Natural conversation uses Apple's on-device Foundation Model with Joe's browser-inspired companion persona in `LanguageModelSession` instructions. No cloud model, API key, Mac mini, Tailscale, original Python server, or Gemini TTS is required.
+A native SwiftUI iPhone app with a direct **iPhone → Nightscout HTTPS** connection. Context collection, storage, Core ML inference, Gemma 4 E2B through LiteRT-LM, speech recognition, and speech synthesis run on the phone. Natural conversation uses Gemma 4 E2B with Joe's browser-inspired persona in LiteRT-LM conversation system instructions. No cloud model, API key, Mac mini, Tailscale, original Python server, or Gemini TTS is required.
 
-**Current status: source code and a testable research pipeline are implemented, and a full unsigned iOS build passes with Xcode 27.2. Signed iPhone installation and acceptance testing remain pending. No personalized model is bundled, and forecasts are never fabricated.** See the [implementation plan](IOS_STANDALONE_IMPLEMENTATION_PLAN.md) for requirements and [implementation status](docs/IMPLEMENTATION_STATUS.md) for delivered functionality and remaining work.
+**Current status: source code and a testable research pipeline are implemented, and a full unsigned iOS build passes with Xcode 27.2. Signed iPhone installation and acceptance testing remain pending. No personalized model is bundled, and forecasts are never fabricated.** See the [implementation plan](IOS_STANDALONE_IMPLEMENTATION_PLAN.md) for original requirements (the Gemma migration supersedes its Apple-model sections) and [implementation status](docs/IMPLEMENTATION_STATUS.md) for delivered functionality and remaining work.
 
 ## Open and install
 
-1. Install the full **Xcode 26 or later** and update the iPhone 15 Pro to **iOS 26 or later**. This project targets iOS 26 to use Foundation Models. If the model is disabled or not downloaded, the app uses deterministic templates. See [Apple Foundation Models](https://developer.apple.com/documentation/foundationmodels).
+1. Install the full **Xcode 26 or later** and update the iPhone 15 Pro to **iOS 26 or later**. The current deployment target remains iOS 26. Apple Intelligence is not required. Install Git LFS (`brew install git-lfs`) before resolving the pinned LiteRT-LM Swift package in Xcode. Simulator builds require an Apple Silicon Mac.
 2. Open `ios/JoeMobile.xcodeproj` and select the `JoeMobile` scheme.
 3. Under Signing & Capabilities, choose your Apple Developer Team and change the bundle ID if necessary. Signing and provisioning must support HealthKit; entitlements are included. Do not commit personal signing settings.
 4. Connect the iPhone, enable Developer Mode, select the phone, and run the app. A Mac is needed for development installation, but not for normal use afterward. Development signing expires; long-term installation requires an appropriate developer distribution method.
@@ -29,11 +29,11 @@ The tab order is **Joe → Overview → Lifestyle → Settings**, with Joe selec
 
 ## Joe conversation model and voice
 
-The app icon uses the supplied T1D Ally artwork. Joe runs on **Apple's on-device Foundation Model**. The browser app's supportive persona is adapted into `JoeConversation.persona` and passed to `LanguageModelSession(instructions:)`; the model generates natural replies rather than merely selecting a template category.
+The app icon uses the supplied T1D Ally artwork. Joe uses **Gemma 4 E2B only**, with LiteRT-LM 0.19.1 on the local CPU. Apple Foundation Models, cloud models and the browser server are not used. The browser-inspired Joe persona remains in `JoeInstructions`, separated into versioned persona, safety and explanation sections and supplied as the conversation's system message.
 
-Static instructions are split into versioned persona, safety, and explanation sections. Each turn first passes through a Swift safety coordinator; a permitted local session registers only relevant structured tools and uses a bounded replay of recent messages. Current readings are never embedded in instructions. This avoids accumulating obsolete snapshots and limits the context budget. No conversation or health context is sent to a cloud model. Versioned per-turn records and optional synthetic persona regressions are included in user-initiated research exports. Current low/high, missing data, stale current-glucose questions, dose requests, unavailable models, tool failures and rejected model responses use a labeled deterministic fallback. Responses are screened for tool-supported facts, language, prediction/measurement distinctions and unsafe advice. See [architecture implementation](docs/PROMPT_ARCHITECTURE_IMPLEMENTATION.md) for safeguards and limits. The browser Python server's web-search, weather, and decision/interpretation pipeline have not been ported, and those tools are not claimed.
+Swift executes only the relevant read-only local tools selected for each question, then passes typed JSON results, bounded recent history and the user message to Gemma. This is deterministic tool preparation, not model-selected native function calling. Current readings never enter system instructions. Swift safety gating and response validation surround generation; missing/stale data, current low/high glucose, dosing requests and rejected replies use labeled deterministic responses. The existing policy bypasses generation when CGM is missing, including social questions. No tool controls a pump or accesses the web. See [architecture implementation](docs/PROMPT_ARCHITECTURE_IMPLEMENTATION.md).
 
-In **Settings → Joe conversation model**, check model availability. Enable Apple Intelligence in iPhone Settings and let its required model assets finish downloading. No API key is needed. Unused credentials from the superseded cloud prototype are removed locally during app initialization without being read or sent anywhere.
+Open **Settings → Gemma 4 E2B → Download model over Wi-Fi** (2.59 GB), keep Joe open, wait for SHA-256 verification, then tap **Load model**. Alternatively import the exact supported `.litertlm` file. Keep at least 6 GB of storage free. Loading is explicit; app launch does not initialize the engine. The model is kept in memory until unloaded, backgrounded or the process ends. After returning from the background, tap Load model again. After installation and loading, model inference works offline; fresh Nightscout updates still need internet. No Apple Intelligence setting or API key is needed. See [model setup and customization](docs/GEMMA_SETUP.md).
 
 In **Settings → Voice**, select English or Mandarin. Hold the microphone to record, release to finish, review the transcription, and send. Recognition requires local support for the selected language. Automatic reply reading defaults to enabled for new settings and can be disabled.
 
@@ -50,13 +50,13 @@ If the tone is audible but the voice is not, check downloaded system voices in i
 Sources/JoeCore/             Pure Swift types, Nightscout decoding, feature and forecast validation
 Tests/JoeCoreTests/          Core tests and Python/Swift feature parity fixtures
 ios/JoeMobile.xcodeproj/     Xcode project and shared scheme
-ios/JoeMobile/              SwiftUI, SwiftData, system services, Core ML, and Foundation Models
+ios/JoeMobile/              SwiftUI, SwiftData, system services, Core ML, and LiteRT-LM
 analysis/forecast/          Dataset construction, A–D experiments, training, evaluation, and export
 scripts/                    Project generation, cross-language fixtures, checks without XCTest
 docs/                       Feature definitions, device tests, and implementation status
 ```
 
-The project uses the local Swift package at the repository root and requires no CocoaPods, XcodeGen, or third-party runtime services. After adding Swift files or model resources, run:
+The project uses the local Swift package at the repository root and uses the pinned LiteRT-LM Swift package and requires no CocoaPods, XcodeGen, or remote inference service. After adding Swift files or model resources, run:
 
 ```sh
 python3 scripts/generate_project.py
@@ -111,11 +111,11 @@ Hypoglycemia probability modeling, IOB/COB, and clinical error grids remain inco
 ## Privacy and runtime limitations
 
 - Conversation logs and regression records stay in the local SwiftData store until cleared or explicitly exported.
-- The app uses URLSession only to read Nightscout entries, treatments, and profiles. It does not write to Nightscout or include a pump-control path.
+- The app uses URLSession to read Nightscout entries, treatments and profiles, and for an explicit model download from Hugging Face. Model downloads contain no chat or health data. It does not write to Nightscout or include a pump-control path.
 - SwiftData does not enable CloudKit. Keychain credentials use ThisDeviceOnly protection. Tokens and authentication URLs are not logged. System backup behavior depends on device settings; exported files are managed by the destination you choose.
 - Calendar titles are used only for transient local classification. Titles, notes, and attendees are not stored. HealthKit requests only the required read permissions. Empty results mean data is unavailable, not necessarily that permission was denied. See [HealthKit authorization](https://developer.apple.com/documentation/healthkit/authorizing-access-to-health-data).
 - Location records normally contain categories and visit times. Coordinates are stored only for places you explicitly name; continuous routes are not stored.
-- Apple's local model receives Joe's persona in instructions, recent messages, and four read-only tools. It must distinguish measurements from experimental forecasts and acknowledge missing or stale data. Unavailability or refusal triggers a labeled local fallback.
+- Gemma receives Joe's persona in system instructions, bounded recent messages and relevant results from four read-only local tools. It must distinguish measurements from experimental forecasts and acknowledge missing or stale data. Unavailability or refusal triggers a labeled local fallback.
 - Background refresh, HealthKit observers, Visits, and geofences are opportunistic and cannot guarantee five-minute execution. Do not depend on this app for emergency alerts.
 - Invalid, future, or unsupported CGM readings outside 40–400 mg/dL are excluded. The interface distinguishes measurements, stale cached readings, and experimental forecasts.
 - The interface, assistant templates, permission descriptions, and documentation are in English. Speech input supports selected English or Mandarin, and speech synthesis selects an English or Mandarin voice from the reply text.

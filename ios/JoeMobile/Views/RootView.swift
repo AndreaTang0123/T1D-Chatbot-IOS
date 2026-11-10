@@ -1,6 +1,7 @@
 import SwiftUI
 import Charts
 import UIKit
+import UniformTypeIdentifiers
 import JoeCore
 
 struct RootView: View {
@@ -197,7 +198,7 @@ struct AssistantView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 18) {
-                        Label("Joe · Apple on-device model", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary)
+                        Label("Joe · Gemma 4 E2B", systemImage: "sparkles").font(.caption).foregroundStyle(.secondary)
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                         TimelineView(.periodic(from: .now, by: 30)) { timeline in
                             let decision = state.safetyDecision(at: timeline.date)
@@ -357,13 +358,31 @@ struct SettingsView: View {
     @State private var secret = ""
     @State private var auth = NightscoutCredentials.Auth.token
     @State private var eraseConfirmation = false
+    @State private var importGemma = false
     var body: some View {
         NavigationStack {
             Form {
-                Section("Joe conversation model") {
-                    LabeledContent("Model", value: "Apple on-device Foundation Model")
-                    Text(state.assistant.availability).font(.footnote).foregroundStyle(.secondary)
-                    Text("Joe's companion persona is supplied through LanguageModelSession instructions. Recent messages and local data tools provide context. Conversation stays on your iPhone; no API key or Mac server is required.")
+                Section("Gemma 4 E2B · On-device model") {
+                    Text(state.assistant.availability).font(.footnote)
+                    Text(state.assistant.installation.status).font(.caption).foregroundStyle(.secondary)
+                    if state.assistant.installation.isBusy {
+                        ProgressView(value: state.assistant.installation.progress)
+                        Button("Cancel installation") { state.assistant.installation.cancel() }
+                    } else if !state.assistant.installation.isInstalled {
+                        Button("Download model over Wi-Fi · 2.59 GB") { state.assistant.installation.download() }
+                        Button("Import supported .litertlm file") { importGemma = true }
+                    } else {
+                        Button(state.assistant.isLoading ? "Loading model…" : state.assistant.isLoaded ? "Model loaded" : "Load model") {
+                            Task { await state.assistant.loadModel() }
+                        }.disabled(state.assistant.isLoading || state.assistant.isLoaded)
+                        Button("Unload model to free memory") { Task { await state.assistant.unloadModel() } }
+                            .disabled(state.isAnswering || state.isRunningPersonaRegression || state.assistant.isLoading)
+                        Button("Remove model file", role: .destructive) { Task {
+                            await state.assistant.unloadModel()
+                            state.assistant.installation.remove()
+                        } }.disabled(state.isAnswering || state.isRunningPersonaRegression || state.assistant.isLoading)
+                    }
+                    Text("Download once, then chat offline. No Apple Intelligence, cloud model, API key, or Mac server is used. Free at least 6 GB before installing. Your messages and health context never go to the model download host.")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Persona regression · Synthetic data") {
@@ -412,10 +431,13 @@ struct SettingsView: View {
                     Button("Clear local data and credentials", role: .destructive) { eraseConfirmation = true }.disabled(state.isRefreshing || state.isAnswering || state.isRunningPersonaRegression)
                 }
                 Section("About forecasts") {
-                    Text("Forecasting pauses when the model is missing, data is stale, or history is insufficient. Deterministic explanations are used when Apple's on-device model is unavailable. Forecasts are for observational research, not treatment adjustments.")
+                    Text("Forecasting pauses when the model is missing, data is stale, or history is insufficient. Deterministic explanations are used when Gemma is unavailable. Forecasts are for observational research, not treatment adjustments.")
                     Text("Joe has no pump-control interface. Conversation, speech, and forecasts run locally without a Mac server or cloud-model API key.").font(.caption)
                 }
             }.navigationTitle("Settings")
+                .fileImporter(isPresented: $importGemma, allowedContentTypes: [.data]) { result in
+                    if case .success(let url) = result { state.assistant.installation.importFile(url) }
+                }
                 .confirmationDialog("Clear all local research data, places, and Nightscout credentials?", isPresented: $eraseConfirmation, titleVisibility: .visible) {
                     Button("Clear", role: .destructive) { state.erase(); url = ""; secret = "" }
                 }

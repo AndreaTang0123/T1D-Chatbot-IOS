@@ -153,6 +153,7 @@ struct ChatMessage: Identifiable {
         let snapshot = assistantSnapshot(at: now)
         return SafetyDecisionEngine(policy: snapshot.policy).evaluate(cgm: snapshot.currentGlucose, forecast: snapshot.forecastResult)
     }
+    var isInBackground = false
     func ask(_ text: String) async {
         guard !isAnswering, !isRunningPersonaRegression, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -165,7 +166,7 @@ struct ChatMessage: Identifiable {
         do { try store.save(assistantTurn: turn) }
         catch { warnings.append("The response is shown, but its research log could not be saved.") }
         messages.append(ChatMessage(role: .joe, text: reply, mode: assistantMode))
-        if autoSpeak { voiceInput.cancel(); speech.speak(reply) }
+        if autoSpeak && !isInBackground { voiceInput.cancel(); speech.speak(reply) }
     }
     func startPersonaRegression() {
         guard !isAnswering, !isRunningPersonaRegression else { return }
@@ -188,7 +189,7 @@ struct ChatMessage: Identifiable {
             guard !Task.isCancelled else { regressionStatus = "Regression canceled."; return }
             do { try store.save(assistantTurn: turn) }
             catch { regressionStatus = "Regression log could not be saved."; return }
-            if turn.mode == "Apple on-device · Validated" { generated += 1 } else { fallbacks += 1 }
+            if turn.mode == "Gemma 4 E2B · Validated" { generated += 1 } else { fallbacks += 1 }
             regressionStatus = "Completed \(generated + fallbacks)/\(PersonaRegressionCase.all.count) cases."
         }
         regressionStatus = "Complete: \(generated) validated model replies, \(fallbacks) fallbacks. Export research JSON for versions, safety decisions and rejection reasons. Tone/empathy still require manual review."

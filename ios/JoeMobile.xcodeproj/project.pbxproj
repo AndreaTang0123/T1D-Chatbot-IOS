@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+        B42000000000000000000001 /* LiteRTLM in Frameworks */ = {isa = PBXBuildFile; productRef = B42000000000000000000003; };
         A11000000000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A11000000000000000000002 /* Assets.xcassets */; };
 		067D625B02E86E34509A5FF1 /* JoeMobile/Storage/LocalStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = EDB56896CE14105DE93E6219 /* JoeMobile/Storage/LocalStore.swift */; };
 		0A58BE0013B8AABC29223FAD /* JoeMobile/Services/HealthKitService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95A48DF3C7DD09F6E1FFBB95 /* JoeMobile/Services/HealthKitService.swift */; };
@@ -47,6 +48,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+                B42000000000000000000001 /* LiteRTLM in Frameworks */,
 				42F202F8D987BE18DDA2010D /* JoeCore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -92,6 +94,7 @@
 			);
 			name = JoeMobile;
 			packageProductDependencies = (
+                B42000000000000000000003 /* LiteRTLM */,
 				D84056C45D39F3386388DF0E /* JoeCore */,
 			);
 			productName = JoeMobile;
@@ -129,6 +132,7 @@
 			);
 			mainGroup = EC6AE75C017423A0C5A951A8;
 			packageReferences = (
+                B42000000000000000000002 /* LiteRT-LM */,
 				BC4A71180870F7945155FBB0 /* XCLocalSwiftPackageReference ".." */,
 			);
 			projectDirPath = "";
@@ -195,7 +199,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 5.0; "EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
@@ -206,7 +210,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 5.0; "EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 			};
 			name = Release;
 		};
@@ -231,7 +235,7 @@
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OPTIMIZATION_LEVEL = "-O";
 				SWIFT_STRICT_CONCURRENCY = targeted;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 5.0; "EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
@@ -242,7 +246,7 @@
 				CLANG_ENABLE_MODULES = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				SDKROOT = iphoneos;
-				SWIFT_VERSION = 5.0;
+				SWIFT_VERSION = 5.0; "EXCLUDED_ARCHS[sdk=iphonesimulator*]" = x86_64;
 			};
 			name = Debug;
 		};
@@ -276,7 +280,11 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+        B42000000000000000000002 = {isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/google-ai-edge/LiteRT-LM"; requirement = {kind = exactVersion; version = 0.19.1; }; };
+/* End XCRemoteSwiftPackageReference section */
 /* Begin XCSwiftPackageProductDependency section */
+        B42000000000000000000003 = {isa = XCSwiftPackageProductDependency; package = B42000000000000000000002; productName = LiteRTLM; };
 		D84056C45D39F3386388DF0E /* JoeCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = BC4A71180870F7945155FBB0 /* XCLocalSwiftPackageReference ".." */;

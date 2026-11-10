@@ -13,7 +13,7 @@ Implementation began in a standalone repository containing only a README and imp
 | Features | UTC five-minute buckets, causal CGM grid, separate missingness flags, and Python/Swift fixtures |
 | Forecast | Core ML CPU inference at 30/60 minutes; manifest/input/output validation; stops when model, history, or fresh CGM is unavailable |
 | Evaluation | Forecast logs, subsequent ±150-second CGM matching, errors, MAE display, and export |
-| Assistant / TTS | Foundation Models availability handling, four read-only tools, Joe persona in session instructions, bounded multi-turn natural conversation, deterministic fallback, text input, English/Mandarin speech voices, and hold-to-talk on-device transcription with editable drafts |
+| Assistant / TTS | Gemma 4 E2B installation and LiteRT-LM availability handling, four read-only tools, Joe persona in session instructions, bounded multi-turn natural conversation, deterministic fallback, text input, English/Mandarin speech voices, and hold-to-talk on-device transcription with editable drafts |
 | Training | Coverage report, chronological 70/15/15 split with boundary purging, A–D Ridge experiments, persistence, Random Forest comparison, Core ML export, and numerical fixtures |
 | Background | Foreground, manual, BGAppRefresh, and HealthKit observer updates; cold-start initialization; no fixed refresh guarantee |
 
@@ -27,9 +27,9 @@ Implementation began in a standalone repository containing only a README and imp
 - iOS Swift files pass parser checks. NightscoutClient, KeychainStore, and ForecastService pass independent type checking with the local SDK.
 - The project, Info.plist, and entitlements pass `plutil -lint`.
 
-**The full iOS app builds successfully with Xcode 27.2 for generic iOS device and simulator targets with code signing disabled.** This build includes SwiftData and Foundation Models macro expansion. The `LocalStore` FileManager argument label was corrected from `atPath:` to `ofItemAtPath:`. Signed installation and device UI validation remain pending.
+**The full iOS app builds successfully with Xcode 27.2 for generic iOS device and simulator targets with code signing disabled.** This build includes SwiftData macro expansion and LiteRT-LM native linking. The `LocalStore` FileManager argument label was corrected from `atPath:` to `ofItemAtPath:`. Signed installation and device UI validation remain pending.
 
-Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run. With full Xcode available, all 43 XCTest tests now pass.
+Initial verification used Command Line Tools without XCTest or the required macro plugins. The earlier core checks compiled the test source directly and were not reported as an XCTest run. With full Xcode available, all 48 XCTest tests now pass.
 
 ## Chat and navigation update
 
@@ -38,7 +38,7 @@ Joe is the default tab and displays a session conversation with a bottom text/vo
 ## Icon, local conversation, and audio update
 
 - The supplied T1D Ally PNG is resized to an opaque 1024×1024 AppIcon asset; both build configurations select it.
-- Apple `SystemLanguageModel.default` generates natural replies. The browser-inspired Joe persona is passed directly as `LanguageModelSession` instructions, with static instructions and up to four selected local tools. Swift safety gating and post-generation validation surround a fresh session with selected structured tools. Recent history and user-reported memory are bounded; current facts are not embedded in instructions. No cloud model or API key is used.
+- Gemma 4 E2B replaces Apple Intelligence entirely. LiteRT-LM 0.19.1 is pinned in Xcode; a verified 2.59 GB model is downloaded over Wi-Fi or imported explicitly. Settings provides progress, cancellation, load/unload and removal. Joe persona/safety/explanation remain system instructions. Selected local tool results and bounded memory are user-message data; Swift gating and validation remain in force.
 - Cloud settings and the cloud network client were removed following the user's clarification. Only a delete-only Keychain migration remains to remove a previously saved prototype credential.
 - Voice input uses stable UIKit touch tracking, token-guarded authorization/callbacks, and a five-second finalization window. Settings provide English/Mandarin selection and automatic reading.
 - Read-aloud now writes local synthesized PCM into a temporary audio file, rejects empty/silent synthesis, and plays through `AVAudioPlayer`. Settings expose a tone test, voice test, playback state, output route, and media volume. Temporary speech is removed when stopped or finished.
@@ -46,7 +46,7 @@ Joe is the default tab and displays a session conversation with a bottom text/vo
 
 ## Safety/prompt architecture plan
 
-The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/prewarming, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 43 XCTest checks pass; real Foundation Model persona quality still needs on-device generation and manual review. The committed regression report is explicitly a deterministic/fake-provider run.
+The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/explicit Gemma loading, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 48 XCTest checks pass; a ten-case Mac Gemma run produced nine screened replies and one rejection fallback; iPhone generation and manual persona review remain pending. The committed regression report is explicitly a deterministic/fake-provider run.
 
 ## Remaining work
 
@@ -75,9 +75,13 @@ flowchart TD
     ML --> LOG[Forecasts / Subsequent actual-value matching]
     LOG --> DB
     DB --> TOOLS[Four local read-only tools]
-    TOOLS --> FM[Apple on-device conversation / Joe instructions]
+    TOOLS --> FM[Gemma 4 E2B / Joe system instructions]
     FM --> OUT[Natural reply / Labeled local fallback]
     OUT --> UI[SwiftUI / Local TTS]
 ```
 
 See [README](../README.md), [DEVICE_TESTS](DEVICE_TESTS.md), and [FEATURE_SCHEMA](FEATURE_SCHEMA.md).
+
+## Gemma migration
+
+See [Gemma setup](GEMMA_SETUP.md). The dependency and model revision/hash are pinned; 48 core tests pass including integrity rejection and tool-payload routing. Device and simulator build verification is recorded in the setup document. On-device speed, peak memory, thermal behavior, voice audibility and model persona quality still require iPhone 15 Pro acceptance testing. This change ports prompting and orchestration; it does not fine-tune weights or add LoRA.

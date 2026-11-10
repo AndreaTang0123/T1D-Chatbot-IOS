@@ -19,9 +19,13 @@ import BackgroundTasks
             }
         }
         .onChange(of: phase) { _, phase in
-            if phase == .active { Task { await state?.refresh() } }
+            if phase == .active { state?.isInBackground = false; Task { await state?.refresh() } }
             if phase == .inactive, state?.voiceInput.isPreparing == false { state?.voiceInput.cancel(); state?.speech.stop() }
-            if phase == .background { state?.cancelPersonaRegression(); state?.voiceInput.cancel(); state?.speech.stop() }
+            if phase == .background {
+                state?.isInBackground = true
+                state?.cancelPersonaRegression(); state?.voiceInput.cancel(); state?.speech.stop()
+                Task { await state?.assistant.unloadModel() }
+            }
             if phase == .background { scheduleRefresh() }
         }
         .backgroundTask(.appRefresh("org.joe.mobile.refresh")) { await refreshInBackground() }

@@ -134,7 +134,7 @@ import XCTest
     func testValidGroundedResponseAcceptedAndVersioned() async throws {
         let model = FakeAssistantModel(); model.reply = ModelReply(text: "Your latest measurement is 120 mg/dL from 0 minutes ago.", usedTools: [.glucose])
         let result = await AssistantCoordinator(provider: model).answer("What is my glucose?", snapshot: snapshot(), history: [])
-        XCTAssertEqual(result.mode, "Apple on-device · Validated"); XCTAssertEqual(result.validationReasons, [])
+        XCTAssertEqual(result.mode, "Gemma 4 E2B · Validated"); XCTAssertEqual(result.validationReasons, [])
         XCTAssertEqual(result.prompts, JoeInstructions.versions); XCTAssertEqual(result.foundationModelVersion, "fake-model.v1")
         let decoded = try JSONDecoder().decode(AssistantTurnRecord.self, from: JSONEncoder().encode(result))
         XCTAssertEqual(decoded.prompts, result.prompts)

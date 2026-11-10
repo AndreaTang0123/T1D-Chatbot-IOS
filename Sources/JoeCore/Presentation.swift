@@ -51,7 +51,7 @@ public extension Treatment {
     }
 }
 
-/// A bounded local conversation turn for Apple's on-device model.
+/// A bounded local conversation turn for the on-device conversation model.
 public struct JoeChatTurn: Codable, Sendable, Equatable {
     public let role: String
     public let content: String

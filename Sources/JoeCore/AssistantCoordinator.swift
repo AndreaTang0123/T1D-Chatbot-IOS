@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ModelAvailability: String, Codable, Sendable {
-    case available, intelligenceDisabled, unsupportedDevice, modelNotReady, unsupportedLanguage, unknown
+    case available, modelMissing, intelligenceDisabled, unsupportedDevice, modelNotReady, unsupportedLanguage, unknown
 }
 public enum AssistantFailure: String, Error, Codable, Sendable {
     case generationError, contextSizeExceeded, unsupportedLanguage, toolFailure, refusal, guardrailViolation, assetsUnavailable, cancelled
@@ -12,6 +12,9 @@ public struct AssistantModelRequest: Sendable {
     public let snapshot: AssistantSnapshot
     public let decision: SafetyDecision
     public let allowedTools: Set<ToolKind>
+    public init(question: String, history: [JoeChatTurn], snapshot: AssistantSnapshot, decision: SafetyDecision, allowedTools: Set<ToolKind>) {
+        self.question = question; self.history = history; self.snapshot = snapshot; self.decision = decision; self.allowedTools = allowedTools
+    }
 }
 public struct ModelReply: Sendable {
     public let text: String
@@ -76,7 +79,7 @@ public struct AssistantTurnRecord: Codable, Sendable, Identifiable {
                 if !used.isSubset(of: allowed) { reasons.append("unexpected_tool") }
                 if let expired = fallback.requiredResponse(decision: decision, userText: question, snapshot: finalSnapshot) {
                     result = expired; mode = "Swift safety · " + decision.code
-                } else if reasons.isEmpty { result = generated.text; mode = "Apple on-device · Validated" }
+                } else if reasons.isEmpty { result = generated.text; mode = "Gemma 4 E2B · Validated" }
                 else { result = fallback.generalResponse(userText: question, snapshot: finalSnapshot); mode = "Local fallback · Response rejected" }
             } catch {
                 failure = error as? AssistantFailure ?? .generationError

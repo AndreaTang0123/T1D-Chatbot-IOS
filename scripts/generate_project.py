@@ -1,4 +1,4 @@
-"""Generate a dependency-free Xcode project, including any exported model resources."""
+"""Generate the Xcode project with pinned local-inference dependencies, including any exported model resources."""
 from pathlib import Path
 import hashlib
 ROOT = Path(__file__).resolve().parents[1]
@@ -23,20 +23,23 @@ product=add('product','{isa = PBXFileReference; explicitFileType = wrapper.appli
 package=add('package','{isa = XCLocalSwiftPackageReference; relativePath = ..; }')
 package_product=add('package_product',f'{{isa = XCSwiftPackageProductDependency; package = {package}; productName = JoeCore; }}')
 package_build=add('package_build', f'{{isa = PBXBuildFile; productRef = {package_product}; }}')
+runtime_package=add('gemma_package','{isa = XCRemoteSwiftPackageReference; repositoryURL = "https://github.com/google-ai-edge/LiteRT-LM"; requirement = {kind = exactVersion; version = 0.19.1; }; }')
+runtime_product=add('gemma_product',f'{{isa = XCSwiftPackageProductDependency; package = {runtime_package}; productName = LiteRTLM; }}')
+runtime_build=add('gemma_build',f'{{isa = PBXBuildFile; productRef = {runtime_product}; }}')
 def phase(key,isa,files): return add(key, f'{{isa = {isa}; buildActionMask = 2147483647; files = ({",".join(files)}); runOnlyForDeploymentPostprocessing = 0; }}')
 src=phase('sources','PBXSourcesBuildPhase',builds)
 res=phase('resources','PBXResourcesBuildPhase',resource_builds)
-framework=phase('frameworks','PBXFrameworksBuildPhase',[package_build])
+framework=phase('frameworks','PBXFrameworksBuildPhase',[package_build,runtime_build])
 group=add('main_group', f'{{isa = PBXGroup; children = ({",".join(refs+[product])}); sourceTree = "<group>"; }}')
 proj_configs=[]; target_configs=[]
 for mode in ['Debug','Release']:
     proj_configs.append(add('proj'+mode, '{isa = XCBuildConfiguration; name = '+mode+'; buildSettings = { SDKROOT = iphoneos; IPHONEOS_DEPLOYMENT_TARGET = 26.0; CLANG_ENABLE_MODULES = YES; SWIFT_VERSION = 5.0; }; }'))
-    settings={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon', 'PRODUCT_NAME':'$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER':'org.joe.mobile', 'INFOPLIST_FILE':'JoeMobile/Resources/Info.plist', 'CODE_SIGN_ENTITLEMENTS':'JoeMobile/Resources/JoeMobile.entitlements', 'CODE_SIGN_STYLE':'Automatic', 'TARGETED_DEVICE_FAMILY':'1', 'SWIFT_VERSION':'5.0', 'SWIFT_STRICT_CONCURRENCY':'targeted', 'GENERATE_INFOPLIST_FILE':'NO', 'CURRENT_PROJECT_VERSION':'1', 'MARKETING_VERSION':'0.1.0', 'LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/Frameworks', 'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if mode=='Debug' else '-O', 'SUPPORTED_PLATFORMS':'iphoneos iphonesimulator', 'ENABLE_USER_SCRIPT_SANDBOXING':'YES'}
+    settings={'ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon', 'PRODUCT_NAME':'$(TARGET_NAME)', 'PRODUCT_BUNDLE_IDENTIFIER':'org.joe.mobile', 'INFOPLIST_FILE':'JoeMobile/Resources/Info.plist', 'CODE_SIGN_ENTITLEMENTS':'JoeMobile/Resources/JoeMobile.entitlements', 'CODE_SIGN_STYLE':'Automatic', 'TARGETED_DEVICE_FAMILY':'1', 'SWIFT_VERSION':'5.0', '"EXCLUDED_ARCHS[sdk=iphonesimulator*]"':'x86_64', 'SWIFT_STRICT_CONCURRENCY':'targeted', 'GENERATE_INFOPLIST_FILE':'NO', 'CURRENT_PROJECT_VERSION':'1', 'MARKETING_VERSION':'0.1.0', 'LD_RUNPATH_SEARCH_PATHS':'$(inherited) @executable_path/Frameworks', 'SWIFT_OPTIMIZATION_LEVEL':'-Onone' if mode=='Debug' else '-O', 'SUPPORTED_PLATFORMS':'iphoneos iphonesimulator', 'ENABLE_USER_SCRIPT_SANDBOXING':'YES'}
     target_configs.append(add('target'+mode, '{isa = XCBuildConfiguration; name = '+mode+'; buildSettings = {'+''.join(k+' = '+q(v)+'; ' for k,v in settings.items())+'}; }'))
 def configs(key,items): return add(key, f'{{isa = XCConfigurationList; buildConfigurations = ({",".join(items)}); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; }}')
 pc=configs('projconfigs',proj_configs); tc=configs('targetconfigs',target_configs)
-target=add('target', f'{{isa = PBXNativeTarget; buildConfigurationList = {tc}; buildPhases = ({src},{framework},{res}); buildRules = (); dependencies = (); name = JoeMobile; packageProductDependencies = ({package_product}); productName = JoeMobile; productReference = {product}; productType = "com.apple.product-type.application"; }}')
-project=add('project', f'{{isa = PBXProject; attributes = {{LastUpgradeCheck = 2600; TargetAttributes = {{{target} = {{CreatedOnToolsVersion = 26.0; SystemCapabilities = {{com.apple.HealthKit = {{enabled = 1; }}; com.apple.BackgroundModes = {{enabled = 1; }}; }}; }}; }}; }}; buildConfigurationList = {pc}; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = {group}; packageReferences = ({package}); projectDirPath = ""; projectRoot = ""; targets = ({target}); }}')
+target=add('target', f'{{isa = PBXNativeTarget; buildConfigurationList = {tc}; buildPhases = ({src},{framework},{res}); buildRules = (); dependencies = (); name = JoeMobile; packageProductDependencies = ({package_product},{runtime_product}); productName = JoeMobile; productReference = {product}; productType = "com.apple.product-type.application"; }}')
+project=add('project', f'{{isa = PBXProject; attributes = {{LastUpgradeCheck = 2600; TargetAttributes = {{{target} = {{CreatedOnToolsVersion = 26.0; SystemCapabilities = {{com.apple.HealthKit = {{enabled = 1; }}; com.apple.BackgroundModes = {{enabled = 1; }}; }}; }}; }}; }}; buildConfigurationList = {pc}; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base); mainGroup = {group}; packageReferences = ({package},{runtime_package}); projectDirPath = ""; projectRoot = ""; targets = ({target}); }}')
 (PROJECT/'project.pbxproj').write_text('// !$*UTF8*$!\n{archiveVersion = 1; classes = {}; objectVersion = 56; objects = {\n'+ '\n'.join(k+' = '+v+';' for k,v in objects.items())+'\n}; rootObject = '+project+'; }\n')
 schemes=PROJECT/'xcshareddata/xcschemes'; schemes.mkdir(parents=True,exist_ok=True)
 (schemes/'JoeMobile.xcscheme').write_text(f'''<?xml version="1.0" encoding="UTF-8"?>

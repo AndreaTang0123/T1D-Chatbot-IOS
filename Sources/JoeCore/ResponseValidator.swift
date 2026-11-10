@@ -6,7 +6,7 @@ public struct ResponseValidation: Codable, Sendable, Equatable {
 }
 /// Conservative regression-tested screening, not a proof of clinical correctness.
 public struct ResponseValidator: Sendable {
-    public static let version = "joe.response-validator.v1"
+    public static let version = "joe.response-validator.v2"
     public init() {}
     public func validate(_ text: String, userText: String, decision: SafetyDecision,
                          snapshot: AssistantSnapshot, evidence: Set<ToolKind>) -> ResponseValidation {
@@ -26,6 +26,11 @@ public struct ResponseValidator: Sendable {
         if matches("(glucose|blood sugar).{0,80}(because|due to|caused by)") || matches("(caused|causes|made).{0,50}(glucose|blood sugar)") || has(["\u{5bfc}\u{81f4}", "\u{80af}\u{5b9a}\u{662f}", "\u{4e00}\u{5b9a}\u{662f}"]) { reasons.append("causal_claim") }
         let mentionsForecast = has(["forecast", "predict", "\u{9884}\u{6d4b}"])
         let mentionsGlucose = has(["glucose", "blood sugar", "mg/dl", "\u{8840}\u{7cd6}"])
+        // All tool glucose values are mg/dL; never accept a different unit with the same number.
+        if mentionsGlucose && (matches(#"\b(?:mmol|mg|g)\s*/\s*(?:l|ml)\b"#) ||
+            has(["\u{6beb}\u{514b}/\u{5347}", "\u{6beb}\u{514b}\u{6bcf}\u{5347}", "\u{6beb}\u{6469}\u{5c14}"])) {
+            reasons.append("unsupported_glucose_unit")
+        }
         let mentionsInsulin = has(["bolus", "basal", "insulin", "iob", "cob", "\u{80f0}\u{5c9b}\u{7d20}", "\u{57fa}\u{7840}\u{7387}"])
         let contextAssertion = matches("your.{0,30}(steps|sleep|heart rate|calendar|event|workout)") || matches("you (are at|slept|walked|have a class)") || matches("\u{4f60}.{0,12}(\u{7761}\u{4e86}|\u{8d70}\u{4e86}|\u{6b65}\u{6570}|\u{5728}\u{5bb6}|\u{5728}\u{5b66}\u{6821}|\u{6709}\u{8bfe}|\u{5fc3}\u{7387})")
         if mentionsGlucose && !evidence.contains(.glucose) && !evidence.contains(.forecast) { reasons.append("glucose_without_tool") }

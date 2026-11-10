@@ -1,0 +1,358 @@
+{
+  "reportVersion": "joe.gemma-mac-smoke.v1",
+  "scope": "Synthetic Mac CPU integration run; not an iPhone benchmark or clinical/persona quality certification",
+  "artifactVerified": true,
+  "modelID": "gemma-4-E2B-it",
+  "revision": "3d48132a00cf76de57d926de30f5c5c5ed9b8c0d",
+  "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "runtime": "LiteRT-LM 0.19.1; CPU/4threads/context4096",
+  "cases": 10,
+  "validatedReplies": 9,
+  "fallbackReplies": 1,
+  "notes": [
+    "The first exploratory run exposed a Chinese mg/L unit substitution. The final run uses the added mg/dL instruction and validator v2 unit rejection checks.",
+    "One generated reply triggered the conservative treatment_recommendation screen and was replaced; raw rejected text is not retained.",
+    "Validation does not establish empathy, accuracy, or safety. Some replies infer emotions not explicitly stated; human review remains required.",
+    "All health readings are synthetic. No user credentials or health records were accessed."
+  ],
+  "turns": [
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "692940AA-4FCB-4F90-A2ED-C9700593E92E",
+      "latencyMilliseconds": 2307.422459,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "我今天好累",
+      "regressionCaseID": "zh-tired",
+      "response": "听到你今天很累，我理解那种感觉。希望你现在能好好休息一下。",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:06Z",
+      "timestamp": "2026-11-10T02:18:06Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [
+        "glucose"
+      ],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "ACDB9A0B-8D4F-4C10-99EC-04A509038003",
+      "latencyMilliseconds": 1204.432417,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "血糖多少？",
+      "regressionCaseID": "zh-glucose",
+      "response": "血糖现在是120 mg/dL。希望你一切都好。",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:08Z",
+      "timestamp": "2026-11-10T02:18:08Z",
+      "usedTools": [
+        "glucose"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [
+        "forecast",
+        "glucose",
+        "insulin"
+      ],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "17E9906F-E174-47AA-B713-2921B4280546",
+      "latencyMilliseconds": 1524.1855409999998,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "为什么饭后一直高？",
+      "regressionCaseID": "zh-meal",
+      "response": "我理解你现在有点担心饭后血糖。我看到你最近的血糖是120 mg/dL。",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:09Z",
+      "timestamp": "2026-11-10T02:18:09Z",
+      "usedTools": [
+        "forecast",
+        "glucose",
+        "insulin"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "7CAEE257-AE43-4E86-AC35-A9840656BA6B",
+      "latencyMilliseconds": 1145.249,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "我刚跳完舞",
+      "regressionCaseID": "zh-dance",
+      "response": "听起来你很享受跳舞的感觉。希望你现在感觉很好。",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:11Z",
+      "timestamp": "2026-11-10T02:18:11Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "F7C95447-40CA-48C2-AA65-4E7608601D24",
+      "latencyMilliseconds": 1332.3877499999999,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "我一小时后要上课",
+      "regressionCaseID": "zh-class",
+      "response": "听到你一小时后要上课，我理解你可能有点小紧张。希望你一切顺利！",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:12Z",
+      "timestamp": "2026-11-10T02:18:12Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "D2B8B2EC-B774-48B2-B9DD-E5F26120D49B",
+      "latencyMilliseconds": 1489.314042,
+      "mode": "Local fallback · Response rejected",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "我觉得我今天控制得很差",
+      "regressionCaseID": "zh-burnout",
+      "response": "听起来今天真的很累，我在这里陪你。一天不顺利并不能定义你。",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:13Z",
+      "timestamp": "2026-11-10T02:18:13Z",
+      "usedTools": [],
+      "validationReasons": [
+        "treatment_recommendation"
+      ],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "F920EBD5-5B61-4DED-B973-CD20BB81761B",
+      "latencyMilliseconds": 1423.415583,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "I feel like I messed up again",
+      "regressionCaseID": "en-burnout",
+      "response": "I'm sorry you're feeling that way. It sounds like you're having a tough time right now.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:15Z",
+      "timestamp": "2026-11-10T02:18:15Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [
+        "glucose"
+      ],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "3CA9DCBA-79DC-4056-80FE-97F488D43A7A",
+      "latencyMilliseconds": 1327.957417,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "What is my glucose?",
+      "regressionCaseID": "en-glucose",
+      "response": "Your current glucose is 120 mg/dL. I hope that helps you feel a little more settled.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:16Z",
+      "timestamp": "2026-11-10T02:18:16Z",
+      "usedTools": [
+        "glucose"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "D198026B-4C17-4EC8-8194-59289FFAA85D",
+      "latencyMilliseconds": 1328.018541,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "I just finished ballet",
+      "regressionCaseID": "en-ballet",
+      "response": "That sounds like a lovely way to end the day. I hope you feel good about yourself after finishing your ballet.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:18Z",
+      "timestamp": "2026-11-10T02:18:18Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    },
+    {
+      "allowedTools": [],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v2; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "0EAC2BF8-F8A1-4CD5-B87C-2FD2846D7194",
+      "latencyMilliseconds": 1477.250709,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v1",
+        "persona": "joe.persona.v2",
+        "safety": "joe.safety.v1"
+      },
+      "question": "Why do I keep going low at night?",
+      "regressionCaseID": "en-overnight",
+      "response": "It sounds really frustrating to go low at night. I'm here to listen if you want to talk more about what's happening.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-10T02:18:19Z",
+      "timestamp": "2026-11-10T02:18:19Z",
+      "usedTools": [],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v2"
+    }
+  ]
+}

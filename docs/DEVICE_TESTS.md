@@ -45,7 +45,7 @@ These device tests remain pending. Source checks do not count as successful devi
 ## Local conversation, icon, and read-aloud
 
 - [ ] Joe's Home Screen icon uses the T1D Ally artwork after an in-place install; existing health data is preserved.
-- [ ] Settings show Apple on-device model availability with no API-key or cloud-model controls.
+- [ ] Settings show Gemma installed/loaded status with no API-key or cloud-model controls.
 - [ ] With airplane mode enabled and model assets already downloaded, greetings and follow-ups receive natural Joe replies using recent conversation context; no cloud request is made.
 - [ ] Current tool snapshots supersede old glucose values in chat history. Unavailable models and generation failures display a labeled local fallback.
 - [ ] Hold/release, release during permission prompts, rapid repeated holds, background cancellation, and delayed final results do not restart input or overwrite a later draft.
@@ -57,7 +57,7 @@ These device tests remain pending. Source checks do not count as successful devi
 ## Models and prospective validation
 
 - [ ] Insufficient 30-minute history, out-of-order/duplicate data, future samples, and timezone/DST changes do not contaminate features.
-- [ ] Apple Intelligence enabled, disabled, downloading, and unsupported region/language states respond correctly, with template fallback on failure.
+- [ ] Gemma missing, downloading, corrupt import, verifying, installed/unloaded, loading, canceled and failed states respond correctly, with template fallback on failure.
 - [ ] Prompts requesting invented values or dosing cannot produce fabricated values, dose recommendations, or pump control.
 - [ ] English/Mandarin speech voices work; verify mute, Bluetooth, and call interruptions.
 - [ ] Run shadow mode for 3–7 days and review targets relative to CGM time, ±150-second matching, and error signs.
@@ -67,9 +67,17 @@ These device tests remain pending. Source checks do not count as successful devi
 ## Prompt/safety architecture acceptance
 
 - [ ] Current low/high status is shown by Swift without waiting for a model reply; stale/no-data and dose requests select deterministic fallback as specified.
-- [ ] Fresh glucose, forecast and context questions call only their relevant tools. Confirm actual used-tool records in the export, not just registered tools.
+- [ ] Fresh glucose, forecast and context questions call only their relevant tools. Confirm actual used-tool records in the export, not just allowed tools.
 - [ ] Model-disabled, asset-not-ready, unsupported language, context overflow, tool failure and rejected output preserve CGM/forecast UI and log distinct reasons.
-- [ ] Run the ten-case synthetic persona regression in Settings with Apple Intelligence available, then repeat in airplane mode after assets are downloaded.
+- [ ] Run the ten-case synthetic persona regression in Settings with Gemma installed and loaded, then repeat in airplane mode after assets are downloaded.
 - [ ] Review exact English/Mandarin language, one/two sentence brevity, empathy before advice, no unsolicited normal glucose, no fabricated facts, no doses/pump changes, and uncertainty when discussing forecasts.
-- [ ] Export and inspect prompt/policy/validator versions and actual OS runtime metadata. Regression results are separate from real chat/CGM and never count as forecasting performance.
+- [ ] Export and inspect prompt/policy/validator versions and weight revision/hash, LiteRT-LM configuration and OS runtime metadata. Regression results are separate from real chat/CGM and never count as forecasting performance.
 - [ ] Update an existing installation without deleting data. Verify SwiftData migration, restored recent chat, and clearing all local conversation/regression records.
+
+## Gemma 4 E2B acceptance
+
+- [ ] Keep at least 6 GB storage free; download over Wi-Fi, cancel, retry, and import the exact pinned file. A wrong-size/corrupt file cannot become installed. No credentials or health data accompany the download.
+- [ ] Cold launch remains responsive before tapping Load model. Load/unload/remove work without deleting health records; restart re-verifies installed weights.
+- [ ] Record peak memory, load latency, first-token/end-to-end latency, thermal state and battery impact on iPhone 15 Pro. A successful Mac smoke test does not establish iPhone performance.
+- [ ] With fresh synthetic regression data and airplane mode, run all ten cases in English/Mandarin; inspect rejected replies and tool-evidence logs. Thinking/template tokens are never shown.
+- [ ] Background during installation/generation, return after memory pressure, and test repeated load/unload. Do not assume an in-progress foreground download survives suspension.
