@@ -14,7 +14,7 @@
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 <key>NSMicrophoneUsageDescription</key><string>Joe uses the microphone while you hold the talk button to transcribe your message on this device.</string>
 <key>NSSpeechRecognitionUsageDescription</key><string>Joe converts your speech to an editable message using on-device speech recognition in your selected language. Audio is not uploaded.</string>
-<key>NSHealthShareUsageDescription</key><string>Joe reads steps, heart rate, workouts, and sleep to study associations between lifestyle context and glucose forecasts on this device.</string>
+<key>NSHealthShareUsageDescription</key><string>Joe reads historical blood glucose for on-device summaries, plus steps, heart rate, workouts, and sleep to study associations between lifestyle context and glucose forecasts on this device.</string>
 <key>NSCalendarsFullAccessUsageDescription</key><string>Joe classifies recent calendar events into lifestyle categories on this device without storing titles, notes, or attendees.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>Joe converts approximate locations into your chosen place categories without recording a continuous route.</string>
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>Optional: use low-power Visits and geofences to record changes in place categories.</string>

@@ -45,7 +45,7 @@ public struct SafetyDecisionEngine: Sendable {
         return .normal
     }
 }
-public enum ToolKind: String, Codable, Sendable, CaseIterable, Hashable { case glucose, forecast, insulin, context }
+public enum ToolKind: String, Codable, Sendable, CaseIterable, Hashable { case glucose, forecast, insulin, context, history }
 public enum ReplyLanguage: String, Codable, Sendable {
     case english, chinese
     public init(text: String) {
@@ -54,6 +54,7 @@ public enum ReplyLanguage: String, Codable, Sendable {
     public var localeIdentifier: String { self == .chinese ? "zh-CN" : "en-US" }
 }
 public struct QuestionIntent: Sendable {
+    public let history: Bool
     public let glucose: Bool
     public let forecast: Bool
     public let insulin: Bool
@@ -64,6 +65,7 @@ public struct QuestionIntent: Sendable {
     public init(_ text: String) {
         let s = text.lowercased()
         func has(_ words: [String]) -> Bool { words.contains(where: s.contains) }
+        history = has(["history", "historical", "past week", "last week", "last 7", "last 14", "last 30", "two weeks", "recent glucose", "血糖表现", "历史血糖", "最近一周", "最近两周", "近两周", "过去一周", "近一个月", "最近血糖", "血糖总结"]) || (has(["glucose", "blood sugar", "cgm", "血糖"]) && has(["recent", "lately", "week", "month", "最近", "近期", "过去", "近7天", "近14天", "近30天"]))
         glucose = has(["glucose", "blood sugar", "cgm", "\u{8840}\u{7cd6}", "\u{4f4e}\u{8840}", "\u{9ad8}\u{8840}"])
         forecast = has(["forecast", "predict", "future trend", "\u{9884}\u{6d4b}", "\u{672a}\u{6765}", "\u{4e00}\u{5c0f}\u{65f6}\u{540e}\u{8840}\u{7cd6}"])
         insulin = has(["insulin", "bolus", "basal", "meal", "after eating", "\u{80f0}\u{5c9b}\u{7d20}", "\u{9910}\u{540e}", "\u{996d}\u{540e}", "\u{78b3}\u{6c34}"])
@@ -78,6 +80,7 @@ public struct QuestionIntent: Sendable {
     }
     public var asksForData: Bool { !sharingExperience && (glucose || forecast || insulin || context) }
     public var tools: Set<ToolKind> {
+        if history && !dose && !forecast && !insulin { return [.history] }
         if sharingExperience { return [] }
         var result: Set<ToolKind> = []
         if glucose { result.insert(.glucose) }

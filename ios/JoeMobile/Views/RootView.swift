@@ -311,7 +311,7 @@ struct DataAccessSettingsView: View {
     var body: some View {
         Group {
                 Section("HealthKit · Read-only access") {
-                    Button("Enable steps, heart rate, sleep, and workouts") { Task {
+                    Button("Enable glucose history, steps, heart rate, sleep, and workouts") { Task {
                         do { try await state.health.authorize(); await state.refresh() }
                         catch { status = "HealthKit authorization request failed" }
                     } }
@@ -320,6 +320,22 @@ struct DataAccessSettingsView: View {
                     LabeledContent("Heart rate", value: state.context?.heartRate.map { "\(Int($0)) bpm" } ?? "Missing")
                     LabeledContent("Most recent sleep", value: state.context?.sleepHours.map { String(format: "%.1f hours", $0) } ?? "Missing")
                     Text("Empty results may indicate no data, partial access, or denied access. iOS does not disclose which read permissions were denied.").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Apple Health · Historical glucose") {
+                    Text("In Dexcom, enable Apple Health blood glucose sharing, then allow Joe to read it above. Dexcom sharing can be about 3 hours delayed; older Clarity history may not be backfilled. This does not supply current glucose or forecasts.").font(.caption)
+                    Picker("History window", selection: $state.historyDays) {
+                        Text("7 days").tag(7); Text("14 days").tag(14); Text("30 days").tag(30)
+                    }
+                    Button("Refresh glucose history") { Task { await state.refreshHealthHistory() } }
+                    Text(state.healthHistoryStatus).font(.caption)
+                    if let summary = state.historySummary {
+                        Text(summary.description(language: .english)).font(.footnote)
+                        Text("Sources: " + summary.sources.joined(separator: ", ")).font(.caption)
+                        Text("Latest sample: " + summary.latest.formatted(date: .abbreviated, time: .shortened)).font(.caption)
+                        Button("Ask Joe about this history") { Task { await state.ask("Summarize my historical glucose for the selected window.") } }
+                            .disabled(state.isAnswering || state.isRunningPersonaRegression)
+                    }
+                    Text("Percentages describe observed 5-minute bins, not clinical time-in-range. Gaps are excluded, not counted as normal. Reads stay on this device; chat summaries enter local conversation logs and explicit research exports.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Calendar · Categories only") {
                     Button("Enable calendar access") { Task {

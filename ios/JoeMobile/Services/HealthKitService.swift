@@ -9,7 +9,7 @@ import JoeCore
     var enabled: Bool { UserDefaults.standard.bool(forKey: "healthEnabled") }
     private var types: Set<HKObjectType> {
         [HKQuantityType.quantityType(forIdentifier: .stepCount)!, HKQuantityType.quantityType(forIdentifier: .heartRate)!,
-         HKObjectType.workoutType(), HKCategoryType.categoryType(forIdentifier: .sleepAnalysis)!]
+         HKQuantityType.quantityType(forIdentifier: .bloodGlucose)!, HKObjectType.workoutType(), HKCategoryType.categoryType(forIdentifier: .sleepAnalysis)!]
     }
     func authorize() async throws {
         guard HKHealthStore.isHealthDataAvailable() else { return }
@@ -45,7 +45,7 @@ import JoeCore
         if let hr = await samples(type: hrType, from: time.addingTimeInterval(-900), to: time).last as? HKQuantitySample {
             result.heartRate = hr.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
         }
-        let workouts = await samples(type: HKObjectType.workoutType(), from: time.addingTimeInterval(-7200), to: time)
+        let workouts = await samples(type: HKQuantityType.quantityType(forIdentifier: .bloodGlucose)!, HKObjectType.workoutType(), from: time.addingTimeInterval(-7200), to: time)
         // Historical completed workouts cannot establish that no workout was active.
         if !workouts.isEmpty { result.workoutActive = workouts.contains { $0.startDate <= time && $0.endDate >= time.addingTimeInterval(-300) } }
         let sleep = await samples(type: sleepType, from: time.addingTimeInterval(-36*3600), to: time)
@@ -69,6 +69,24 @@ import JoeCore
             result.sleepHours = seconds/3600
         }
         return result
+    }
+    func glucoseHistory(at now: Date) async throws -> [GlucoseSample] {
+        guard enabled, HKHealthStore.isHealthDataAvailable() else { return [] }
+        let type = HKQuantityType.quantityType(forIdentifier: .bloodGlucose)!
+        return try await withCheckedThrowingContinuation { continuation in
+            let predicate = HKQuery.predicateForSamples(withStart: now.addingTimeInterval(-30*86400), end: now, options: [.strictStartDate, .strictEndDate])
+            let query = HKSampleQuery(sampleType: type, predicate: predicate, limit: HKObjectQueryNoLimit,
+                                      sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]) { _, rows, error in
+                if let error { continuation.resume(throwing: error); return }
+                let samples = (rows ?? []).compactMap { $0 as? HKQuantitySample }.map {
+                    GlucoseSample(id: "healthkit:" + $0.uuid.uuidString, timestamp: $0.startDate,
+                                  glucose: $0.quantity.doubleValue(for: HKUnit(from: "mg/dL")),
+                                  receivedAt: now, sourceName: $0.sourceRevision.source.name)
+                }
+                continuation.resume(returning: samples)
+            }
+            store.execute(query)
+        }
     }
     private func stepTotal(type: HKQuantityType, from: Date, to: Date) async -> Double? {
         await withCheckedContinuation { continuation in

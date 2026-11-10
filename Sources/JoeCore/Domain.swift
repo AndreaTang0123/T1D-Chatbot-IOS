@@ -4,9 +4,11 @@ public struct GlucoseSample: Codable, Sendable, Equatable, Identifiable {
     public let id: String
     public let timestamp: Date
     public let glucose: Double
+    public let sourceName: String?
     public let direction: String?
     public let receivedAt: Date
-    public init(id: String, timestamp: Date, glucose: Double, direction: String? = nil, receivedAt: Date) {
+    public init(id: String, timestamp: Date, glucose: Double, direction: String? = nil, receivedAt: Date, sourceName: String? = nil) {
+        self.sourceName = sourceName
         self.id = id; self.timestamp = timestamp; self.glucose = glucose
         self.direction = direction; self.receivedAt = receivedAt
     }

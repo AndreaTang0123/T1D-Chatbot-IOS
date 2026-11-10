@@ -42,6 +42,7 @@ public struct CurrentContextResult: Codable, Sendable {
     public let minutesUntilNextEvent: Int?
 }
 public struct AssistantSnapshot: Sendable {
+    public let glucoseHistory: GlucoseHistorySummary?
     public let glucose: GlucoseSample?
     public let forecast: Forecast?
     public let treatments: [Treatment]
@@ -53,14 +54,15 @@ public struct AssistantSnapshot: Sendable {
     public let currentEventEnd: Date?
     public init(glucose: GlucoseSample?, forecast: Forecast?, treatments: [Treatment], context: LifestyleContext?,
                 now: Date, policy: SafetyPolicy = SafetyPolicy(), nextEventCategory: String? = nil,
-                nextEventStart: Date? = nil, currentEventEnd: Date? = nil) {
+                nextEventStart: Date? = nil, currentEventEnd: Date? = nil, glucoseHistory: GlucoseHistorySummary? = nil) {
+        self.glucoseHistory = glucoseHistory
         self.glucose = glucose; self.forecast = forecast; self.treatments = treatments; self.context = context
         self.now = now; self.policy = policy; self.nextEventCategory = nextEventCategory
         self.nextEventStart = nextEventStart; self.currentEventEnd = currentEventEnd
     }
     public func rechecked(at time: Date) -> AssistantSnapshot {
         AssistantSnapshot(glucose: glucose, forecast: forecast, treatments: treatments, context: context, now: time,
-            policy: policy, nextEventCategory: nextEventCategory, nextEventStart: nextEventStart, currentEventEnd: currentEventEnd)
+            policy: policy, nextEventCategory: nextEventCategory, nextEventStart: nextEventStart, currentEventEnd: currentEventEnd, glucoseHistory: glucoseHistory)
     }
     public var currentGlucose: CurrentGlucoseResult {
         guard let g = glucose, g.glucose.isFinite, (40...400).contains(g.glucose), g.timestamp <= now else {

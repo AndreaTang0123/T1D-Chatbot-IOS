@@ -5,6 +5,7 @@ public struct ExplanationFallback: Sendable {
     public func requiredResponse(decision: SafetyDecision, userText: String, snapshot: AssistantSnapshot) -> String? {
         let intent = QuestionIntent(userText)
         if intent.dose { return dose(language: ReplyLanguage(text: userText)) }
+        if intent.tools == [.history] { return snapshot.glucoseHistory == nil ? generalResponse(userText: userText, snapshot: snapshot) : nil }
         switch decision {
         case .noData: return generalResponse(userText: userText, snapshot: snapshot)
         case .staleData where intent.glucose || intent.forecast: return glucose(snapshot, language: ReplyLanguage(text: userText))
@@ -16,6 +17,9 @@ public struct ExplanationFallback: Sendable {
     public func generalResponse(userText: String, snapshot: AssistantSnapshot) -> String {
         let intent = QuestionIntent(userText); let language = ReplyLanguage(text: userText)
         if intent.dose { return dose(language: language) }
+        if intent.tools == [.history] {
+            return snapshot.glucoseHistory?.description(language: language) ?? (language == .chinese ? "没有可读取的 Apple 健康历史血糖；请启用 Dexcom 到 Apple 健康的同步，并授权 Joe 读取血糖。空结果也可能表示未授权或没有记录。" : "No Apple Health glucose history is visible. Enable Dexcom sharing to Apple Health and allow Joe to read blood glucose; empty results can also mean denied access or no records.")
+        }
         if intent.emotional { return language == .chinese ? "\u{542c}\u{8d77}\u{6765}\u{4eca}\u{5929}\u{771f}\u{7684}\u{5f88}\u{7d2f}，\u{6211}\u{5728}\u{8fd9}\u{91cc}\u{966a}\u{4f60}。\u{4e00}\u{5929}\u{4e0d}\u{987a}\u{5229}\u{5e76}\u{4e0d}\u{80fd}\u{5b9a}\u{4e49}\u{4f60}。" : "That sounds like a lot to carry; I'm here with you. A difficult day doesn't define you." }
         if intent.sharingExperience { return language == .chinese ? "\u{6211}\u{542c}\u{5230}\u{4e86}，\u{6211}\u{5728}\u{8fd9}\u{91cc}\u{966a}\u{4f60}。" : "Got it; I'm here with you." }
         if intent.forecast { return prediction(snapshot, language: language) }

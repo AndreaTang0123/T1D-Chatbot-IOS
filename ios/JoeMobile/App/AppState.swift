@@ -25,6 +25,10 @@ struct ChatMessage: Identifiable {
     let voiceInput = SpeechInputService()
     private let nightscout = NightscoutClient()
     private let forecaster = ForecastService()
+    var healthGlucoseHistory: [GlucoseSample] = []
+    var healthHistoryStatus = "Enable HealthKit access to read historical glucose."
+    var historyDays = 14
+    var historySummary: GlucoseHistorySummary? { GlucoseHistorySummary(samples: healthGlucoseHistory, days: historyDays, now: Date()) }
     var glucose: [GlucoseSample] = []
     var treatments: [Treatment] = []
     var context: LifestyleContext?
@@ -101,6 +105,7 @@ struct ChatMessage: Identifiable {
     func refresh() async {
         guard !isRefreshing else { return }
         isRefreshing = true; syncError = nil; warnings = []; defer { isRefreshing = false }
+        await refreshHealthHistory()
         var now = Date()
         do {
             if let credentials = try KeychainStore.load() {
@@ -143,11 +148,22 @@ struct ChatMessage: Identifiable {
         } catch let issue as DataIssue { forecast = nil; forecastStatus = issue.localizedDescription }
         catch { forecast = nil; forecastStatus = "Local processing failed: " + error.localizedDescription }
     }
-    func assistantSnapshot(at now: Date) -> AssistantSnapshot {
+    func refreshHealthHistory() async {
+        do {
+            let records = try await health.glucoseHistory(at: Date())
+            guard health.enabled, !Task.isCancelled else { healthGlucoseHistory = []; return }
+            healthGlucoseHistory = records
+            healthHistoryStatus = records.isEmpty ? "No visible blood glucose records. Check Dexcom sharing and Joe's read access; iOS does not reveal read denial." : "Apple Health history refreshed. Not a real-time glucose source."
+        } catch {
+            healthGlucoseHistory = []
+            healthHistoryStatus = "Unable to read Apple Health glucose. Unlock iPhone and retry; check Health permissions."
+        }
+    }
+    func assistantSnapshot(at now: Date, historyWindow: Int? = nil) -> AssistantSnapshot {
         AssistantSnapshot(glucose: glucose.last, forecast: forecast, treatments: treatments,
             context: currentContext ?? context, now: now, policy: SafetyPolicy(cgmStaleSeconds: staleMinutes*60),
             nextEventCategory: calendarSnapshot.next, nextEventStart: calendarSnapshot.nextStart,
-            currentEventEnd: calendarSnapshot.currentEnd)
+            currentEventEnd: calendarSnapshot.currentEnd, glucoseHistory: GlucoseHistorySummary(samples: healthGlucoseHistory, days: historyWindow ?? historyDays, now: now))
     }
     func safetyDecision(at now: Date) -> SafetyDecision {
         let snapshot = assistantSnapshot(at: now)
@@ -159,7 +175,8 @@ struct ChatMessage: Identifiable {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         messages.append(ChatMessage(role: .user, text: question))
         isAnswering = true; defer { isAnswering = false }
-        let snapshot = assistantSnapshot(at: Date())
+        if QuestionIntent(question).history { await refreshHealthHistory() }
+        let snapshot = assistantSnapshot(at: Date(), historyWindow: GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays))
         let history = messages.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
         let turn = await coordinator.answer(question, snapshot: snapshot, history: history)
         reply = turn.response; assistantMode = turn.mode
@@ -207,6 +224,7 @@ struct ChatMessage: Identifiable {
             KeychainStore.removeLegacyConversationCredential(); try KeychainStore.delete(); try store.erase()
             health.disable(); UserDefaults.standard.set(false, forKey: "calendarEnabled"); location.forgetAll(); voiceInput.cancel(); speech.stop()
             if let exportURL { try? FileManager.default.removeItem(at: exportURL) }; exportURL = nil
+            healthGlucoseHistory = []; healthHistoryStatus = "Health collection paused."
             connected = false; glucose = []; treatments = []; context = nil; currentContext = nil; forecast = nil
             matchedCount = 0; mae30 = nil; mae60 = nil; lastSync = nil; warnings = []; syncError = nil
             syncStatus = "Local data cleared"; forecastStatus = "Waiting for CGM data"; reply = "Local records have been cleared."

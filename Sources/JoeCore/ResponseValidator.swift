@@ -6,7 +6,7 @@ public struct ResponseValidation: Codable, Sendable, Equatable {
 }
 /// Conservative regression-tested screening, not a proof of clinical correctness.
 public struct ResponseValidator: Sendable {
-    public static let version = "joe.response-validator.v2"
+    public static let version = "joe.response-validator.v3"
     public init() {}
     public func validate(_ text: String, userText: String, decision: SafetyDecision,
                          snapshot: AssistantSnapshot, evidence: Set<ToolKind>) -> ResponseValidation {
@@ -33,7 +33,7 @@ public struct ResponseValidator: Sendable {
         }
         let mentionsInsulin = has(["bolus", "basal", "insulin", "iob", "cob", "\u{80f0}\u{5c9b}\u{7d20}", "\u{57fa}\u{7840}\u{7387}"])
         let contextAssertion = matches("your.{0,30}(steps|sleep|heart rate|calendar|event|workout)") || matches("you (are at|slept|walked|have a class)") || matches("\u{4f60}.{0,12}(\u{7761}\u{4e86}|\u{8d70}\u{4e86}|\u{6b65}\u{6570}|\u{5728}\u{5bb6}|\u{5728}\u{5b66}\u{6821}|\u{6709}\u{8bfe}|\u{5fc3}\u{7387})")
-        if mentionsGlucose && !evidence.contains(.glucose) && !evidence.contains(.forecast) { reasons.append("glucose_without_tool") }
+        if mentionsGlucose && !evidence.contains(.glucose) && !evidence.contains(.forecast) && !evidence.contains(.history) { reasons.append("glucose_without_tool") }
         if mentionsInsulin && !evidence.contains(.insulin) { reasons.append("insulin_without_tool") }
         if contextAssertion && !evidence.contains(.context) { reasons.append("context_without_tool") }
         let cgm = snapshot.currentGlucose; let forecast = snapshot.forecastResult
@@ -46,7 +46,7 @@ public struct ResponseValidator: Sendable {
             } else if !unavailableWords { reasons.append("unavailable_forecast_claim") }
         }
         if has(["iob", "cob"]) && !unavailableWords { reasons.append("unvalidated_iob_cob") }
-        if mentionsGlucose && !intent.glucose && !intent.forecast && !intent.insulin && decision == .normal { reasons.append("unsolicited_normal_glucose") }
+        if mentionsGlucose && !intent.glucose && !intent.forecast && !intent.insulin && !intent.history && decision == .normal { reasons.append("unsolicited_normal_glucose") }
         if (mentionsGlucose || mentionsInsulin || mentionsForecast || contextAssertion) &&
             matches("\\b(zero|one|two|three|four|five|six|seven|eight|nine|ten|hundred|thousand)\\b") {
             reasons.append("unverifiable_written_number")
@@ -63,6 +63,11 @@ public struct ResponseValidator: Sendable {
         }
         let numbers = Self.numbers(text)
         var supported: [Double] = []
+        if evidence.contains(.history), let h = snapshot.glucoseHistory {
+            supported += h.supportedNumbers
+            if !has(["historical", "history", "delayed", "历史", "延迟"]) { reasons.append("history_without_delay_label") }
+            if has(["right now", "currently", "当前血糖", "现在血糖", "time in range", "达标时间"]) { reasons.append("history_as_current_or_time_weighted") }
+        }
         if evidence.contains(.glucose) { supported += [cgm.glucoseMgDl, cgm.ageMinutes.map(Double.init)].compactMap { $0 } }
         if evidence.contains(.forecast), forecast.available {
             supported += [forecast.predicted30m, forecast.predicted60m, forecast.uncertainty30m, forecast.uncertainty60m,
