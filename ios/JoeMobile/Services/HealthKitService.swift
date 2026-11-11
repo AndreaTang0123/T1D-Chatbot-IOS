@@ -45,7 +45,7 @@ import JoeCore
         if let hr = await samples(type: hrType, from: time.addingTimeInterval(-900), to: time).last as? HKQuantitySample {
             result.heartRate = hr.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
         }
-        let workouts = await samples(type: HKQuantityType.quantityType(forIdentifier: .bloodGlucose)!, HKObjectType.workoutType(), from: time.addingTimeInterval(-7200), to: time)
+        let workouts = await samples(type: HKObjectType.workoutType(), from: time.addingTimeInterval(-7200), to: time)
         // Historical completed workouts cannot establish that no workout was active.
         if !workouts.isEmpty { result.workoutActive = workouts.contains { $0.startDate <= time && $0.endDate >= time.addingTimeInterval(-300) } }
         let sleep = await samples(type: sleepType, from: time.addingTimeInterval(-36*3600), to: time)

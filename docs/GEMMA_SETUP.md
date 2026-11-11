@@ -47,3 +47,15 @@ python3 scripts/check_gemma_runtime.py --model /absolute/path/gemma-4-E2B-it.lit
 ```
 
 The check extracts the production runtime actor, verifies the exact model, and runs synthetic cases through the core coordinator/validator. It never reads the app database. Use `--runtime-package /path/to/LiteRT-LM` only with a local v0.19.1 checkout. Backgrounding cancels an active generation and unloads weights; returning requires Load model again.
+
+## Xcode reports missing package products
+
+If both `LiteRTLM` and local `JoeCore` appear missing, inspect Report Navigator → Resolve Packages. A `Git LFS is not installed` error can occur even when `git-lfs --version` works in Terminal: Finder-launched Xcode may not inherit Homebrew's PATH. Quit Xcode completely, then double-click `scripts/open_xcode.command` (or run it in Terminal). This launcher starts Xcode with Homebrew on PATH without changing global settings. Resolve Package Versions and build again. Clearing package caches alone does not fix a missing executable in Xcode's environment.
+
+## Direct-answer prompt revision
+
+`joe.persona.v3`, `joe.safety.v2`, `joe.explanation.v2` and `joe.gemma-adapter.v4` distinguish ordinary suggestions from personal clinical claims. Direct questions receive concrete answers first; empathy is used when feelings are expressed rather than as a mandatory opening. General meal ideas do not require a health-data tool. Personal health claims still require evidence; the model must not prescribe food or timing changes as treatment for recurrent highs/lows. Examples demonstrate actual lunch suggestions, and repeated requests ask for additional detail/options. The existing concise-response limits and Swift safety gates remain unchanged.
+
+The native smoke harness now includes the reported four-turn lunch conversation, preserving prior turns to exercise follow-up context. Unit checks alone cannot establish usefulness: inspect the actual replies and review on iPhone after an in-place Xcode update. Model weights do not change and need not be downloaded again.
+
+Verification: 51 core XCTest tests pass. The [recorded direct-answer run](reports/direct-answer-prompts.v1.json) includes ten persona cases plus four consecutive lunch turns using actual Gemma CPU inference. All lunch turns supplied food options; the first follow-up still repeated the prior choices, while the final follow-up offered different choices. Prompts improve task completion but do not guarantee novelty, tone or factual/clinical safety.

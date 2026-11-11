@@ -141,7 +141,7 @@ final class JoeCoreTests: XCTestCase {
         let history = (0..<30).map { JoeChatTurn(role: $0 % 2 == 0 ? "user" : "assistant", content: "turn \($0)") }
         let instructions = JoeInstructions.combined
         XCTAssertFalse(instructions.contains("120"))
-        XCTAssertTrue(instructions.contains("supportive T1D companion"))
+        XCTAssertTrue(instructions.contains("T1D companion"))
         let prompt = ConversationMemory.prompt(question: "What is my glucose?", history: history, decision: .normal)
         let data = Data(prompt.components(separatedBy: "\n").last!.utf8)
         struct Payload: Decodable { let recentConversation: [JoeChatTurn]; let userMessage: String }

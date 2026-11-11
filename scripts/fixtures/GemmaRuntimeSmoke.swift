@@ -28,6 +28,17 @@ import JoeCore
             print("CASE: \(item.id)\nQUESTION: \(item.text)\nREPLY: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
             turns.append(turn)
         }
+        // Replay the reported lunch conversation; later turns must resolve the topic from history.
+        var history: [JoeChatTurn] = []
+        for (index, question) in ["What should I have for lunch?", "Give me some recommendations", "Something healthy but tasty", "Yes give me some suggestions"].enumerated() {
+            let now = Date()
+            let snapshot = AssistantSnapshot(glucose: GlucoseSample(id: "synthetic", timestamp: now, glucose: 120, direction: "Flat", receivedAt: now), forecast: nil, treatments: [], context: nil, now: now)
+            history.append(JoeChatTurn(role: "user", content: question))
+            let turn = await coordinator.answer(question, snapshot: snapshot, history: history, regressionCaseID: "en-lunch-followup-\(index)")
+            history.append(JoeChatTurn(role: "assistant", content: turn.response))
+            print("LUNCH: \(question)\nREPLY: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
+            turns.append(turn)
+        }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(turns).write(to: URL(fileURLWithPath: CommandLine.arguments[2]))
         await provider.runtime.unload()
