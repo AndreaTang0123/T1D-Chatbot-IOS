@@ -20,16 +20,18 @@ actor GemmaRuntime {
         guard ticket == epoch else { throw CancellationError() }
         engine = candidate
     }
-    func generate(prompt: String) async throws -> String {
+    func generate(prompt: String, maxOutputTokens: Int = 220) async throws -> String {
+        try Task.checkCancellation()
         guard let engine else { throw AssistantFailure.assetsUnavailable }
         let sampler = try SamplerConfig(topK: 40, topP: 0.9, temperature: 0.3)
         let config = ConversationConfig(systemMessage: Message(JoeInstructions.combined + "\n\n" + GemmaPromptBuilder.adapterInstructions, role: .system),
             samplerConfig: sampler, thinkingConfig: ThinkingConfig(enableThinking: false), automaticToolCalling: false)
         let conversation = try await engine.createConversation(with: config)
+        try Task.checkCancellation()
         self.conversation = conversation
         defer { self.conversation = nil }
         return try await withTaskCancellationHandler {
-            let response = try await conversation.sendMessage(Message(prompt), maxOutputTokens: 220,
+            let response = try await conversation.sendMessage(Message(prompt), maxOutputTokens: maxOutputTokens,
                                                              thinkingConfig: ThinkingConfig(enableThinking: false))
             try Task.checkCancellation()
             return response.toString.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -41,11 +43,20 @@ actor GemmaRuntime {
 @MainActor @Observable final class AssistantService: AssistantModelProvider {
     let installation = GemmaModelInstallation()
     private let runtime = GemmaRuntime()
-    private(set) var isLoaded = false
-    private(set) var isLoading = false
-    private(set) var loadError: String?
-    private var loadGeneration = UUID()
+    @ObservationIgnored private lazy var lifecycle = LocalModelLifecycle(load: { [weak self] in
+        guard let self else { throw CancellationError() }
+        try await self.runtime.load(modelURL: self.installation.modelURL, cacheURL: self.installation.cacheURL)
+    }, unload: { [weak self] in await self?.runtime.unload() })
+    private var preparations = 0
+    private var preparationGeneration = UUID()
+    private var isBackground = false
+    private var sceneTask: Task<Void, Never>?
+    private var sceneID = UUID()
     private var inferenceTask: Task<String, Error>?
+    var isLoaded: Bool { lifecycle.phase == .ready }
+    var isLoading: Bool { preparations > 0 || lifecycle.phase == .loading }
+    var isUnloading: Bool { lifecycle.phase == .unloading }
+    var loadError: String? { lifecycle.lastError }
     var runtimeVersion: String {
         GemmaModelSpec.modelID + "; revision=" + GemmaModelSpec.revision + "; sha256=" + GemmaModelSpec.sha256
             + "; " + GemmaPromptBuilder.adapterVersion + "; " + GemmaModelSpec.runtimeVersion + "; CPU/4threads/context4096; " + ProcessInfo.processInfo.operatingSystemVersionString
@@ -57,27 +68,50 @@ actor GemmaRuntime {
     var availability: String {
         if isLoading { return "Loading Gemma 4 E2B on this device…" }
         if isLoaded { return "Gemma 4 E2B ready · Local CPU inference" }
-        return loadError ?? (installation.isInstalled ? "Model installed. Tap Load model to start local conversation." : "Download or import Gemma 4 E2B below. Apple Intelligence is not used.")
+        return loadError ?? (installation.isInstalled ? "Model installed. Gemma loads automatically when a reply needs it." : "Download or import Gemma 4 E2B below. Apple Intelligence is not used.")
     }
-    // Loading is explicit to avoid multi-GB initialization during app launch.
+    // No heavy work at launch or just from opening the chat page.
     func prewarm() {}
     func releasePrewarm() {}
-    func loadModel() async {
-        guard installation.isInstalled, !isLoading, !isLoaded else { return }
-        let token = loadGeneration
-        isLoading = true; loadError = nil; defer { isLoading = false }
+    func prepareForTurn() async -> Bool {
+        guard !isBackground else { return false }
+        let ticket = preparationGeneration
+        preparations += 1; defer { preparations -= 1 }
+        if let sceneTask { await sceneTask.value }
+        await installation.waitForVerification()
+        guard installation.isInstalled, !isBackground, !Task.isCancelled, ticket == preparationGeneration else { return false }
         do {
-            try await runtime.load(modelURL: installation.modelURL, cacheURL: installation.cacheURL)
-            try Task.checkCancellation()
-            guard token == loadGeneration else { await runtime.unload(); return }; isLoaded = true
-        } catch is CancellationError { await runtime.unload(); isLoaded = false }
-        catch { await runtime.unload(); isLoaded = false; loadError = "Gemma could not load. Free memory, close other apps, and retry; check the model installation status." }
+            try await lifecycle.beginUse()
+            guard !isBackground, !Task.isCancelled, ticket == preparationGeneration else { lifecycle.endUse(); return false }
+            return true
+        }
+        catch { return false }
+    }
+    func finishTurn() { lifecycle.endUse() }
+    func loadModel() async {
+        if await prepareForTurn() { finishTurn() }
     }
     func unloadModel() async {
-        loadGeneration = UUID(); inferenceTask?.cancel()
-        await runtime.unload(); isLoaded = false; loadError = nil
+        preparationGeneration = UUID()
+        inferenceTask?.cancel()
+        await lifecycle.release()
+    }
+    func sceneChanged(background: Bool) {
+        isBackground = background; sceneID = UUID()
+        let id = sceneID
+        if background { preparationGeneration = UUID(); inferenceTask?.cancel() }
+        sceneTask = Task { @MainActor [weak self] in
+            guard let self, id == self.sceneID else { return }
+            await self.lifecycle.setBackground(background)
+        }
+    }
+    func memoryPressure() async {
+        preparationGeneration = UUID()
+        inferenceTask?.cancel()
+        await lifecycle.release()
     }
     func respond(to request: AssistantModelRequest) async throws -> ModelReply {
+        guard !isBackground, !Task.isCancelled else { throw AssistantFailure.cancelled }
         guard isLoaded else { throw AssistantFailure.assetsUnavailable }
         let current = request.snapshot.rechecked(at: Date())
         let refreshed = AssistantModelRequest(question: request.question, history: request.history, snapshot: current,
@@ -87,7 +121,7 @@ actor GemmaRuntime {
         catch { throw AssistantFailure.toolFailure }
         do {
             let runtime = self.runtime
-            let task = Task { try await runtime.generate(prompt: payload.prompt) }
+            let task = Task { try await runtime.generate(prompt: payload.prompt, maxOutputTokens: payload.maxOutputTokens) }
             inferenceTask = task; defer { inferenceTask = nil }
             let text = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
             try Task.checkCancellation()
@@ -129,6 +163,7 @@ actor GemmaRuntime {
         if FileManager.default.fileExists(atPath: modelURL.path) { verifyExisting() }
         else { status = "Not installed · 2.59 GB download over Wi-Fi" }
     }
+    func waitForVerification() async { if let verification { await verification.value } }
     func download() {
         guard !isBusy else { return }
         guard hasSpace() else { status = GemmaInstallationError.insufficientSpace.localizedDescription; return }
@@ -151,7 +186,7 @@ actor GemmaRuntime {
                 worker = work
                 try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                 guard generation == token, !Task.isCancelled else { try? FileManager.default.removeItem(at: staged); return }
-                try commit(staged); status = "Verified Gemma 4 E2B installed. Tap Load model."
+                try commit(staged); status = "Verified Gemma 4 E2B installed. It will load automatically when a reply needs it."
             } catch { try? FileManager.default.removeItem(at: staged); if generation == token { status = error.localizedDescription } }
             if generation == token { isBusy = false; verification = nil }
         }
@@ -180,7 +215,7 @@ actor GemmaRuntime {
                 let work = Task.detached(priority: .utility) { try GemmaModelSpec.verify(file: file) }
                 worker = work
                 try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
-                guard generation == token else { return }; isInstalled = true; status = "Installed model verified. Tap Load model."
+                guard generation == token else { return }; isInstalled = true; status = "Installed model verified. It will load automatically when a reply needs it."
             } catch { if generation == token { isInstalled = false; status = error.localizedDescription } }
             if generation == token { isBusy = false; verification = nil }
         }
@@ -216,7 +251,7 @@ actor GemmaRuntime {
                     self.worker = work
                     try await withTaskCancellationHandler { try await work.value } onCancel: { work.cancel() }
                     guard self.generation == token else { try? FileManager.default.removeItem(at: staged); return }
-                    try self.commit(staged); self.status = "Verified Gemma 4 E2B installed. Tap Load model."
+                    try self.commit(staged); self.status = "Verified Gemma 4 E2B installed. It will load automatically when a reply needs it."
                 } catch { try? FileManager.default.removeItem(at: staged); if self.generation == token { self.status = error.localizedDescription } }
                 if self.generation == token { self.isBusy = false; self.verification = nil }
             }

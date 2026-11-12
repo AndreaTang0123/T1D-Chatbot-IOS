@@ -1,0 +1,38 @@
+{
+  "replies": [
+    "Hello. How can I help you today?",
+    "Hello. How can I help you today?"
+  ],
+  "runtime": "LiteRT-LM 0.19.1",
+  "scope": "Synthetic Mac CPU lifecycle integration; not iPhone memory/thermal validation",
+  "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "states": [
+    "loaded and generated",
+    "brief background retained engine",
+    "idle unload released native engine",
+    "next use reloaded and generated",
+    "explicit release completed"
+  ],
+  "reportVersion": "joe.gemma-lifecycle-mac.v1",
+  "smokeTimeoutsSeconds": {
+    "foregroundIdle": 0.1,
+    "backgroundIdle": 0.05
+  },
+  "productionTimeoutsSeconds": {
+    "foregroundIdle": 300,
+    "backgroundIdle": 120
+  },
+  "verification": {
+    "coreXCTestCount": 74,
+    "coreFailures": 0,
+    "unsignedBuilds": [
+      "generic iOS device",
+      "Apple Silicon iOS Simulator"
+    ],
+    "deviceChecksPending": [
+      "iPhone 15 Pro actual RAM pressure",
+      "iOS suspension behavior",
+      "load latency and thermals"
+    ]
+  }
+}

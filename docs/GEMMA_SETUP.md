@@ -7,8 +7,8 @@ Joe now uses only local Gemma 4 E2B for generative conversation. Apple Intellige
 1. On the development Mac install Git LFS (`brew install git-lfs`), then open `ios/JoeMobile.xcodeproj`. Xcode resolves LiteRT-LM **0.19.1**. Only its `LiteRTLM` product is linked; the Apple Foundation Models adapter is not linked. Apple Silicon simulators are supported; the supplied binary has no Intel simulator slice.
 2. Choose the existing signing team, physical iPhone destination and Run. Keep the same bundle ID to preserve local records. No model is bundled in the app or committed to Git.
 3. Open **Settings → Gemma 4 E2B → Download model over Wi-Fi**. Allow at least **6 GB** free storage for staging and caches. The model download is **2,588,147,712 bytes** (2.59 GB decimal). Keep Joe open; a suspended/failed transfer can be retried, but partial downloads are not resumed.
-4. Wait for size/SHA-256 verification, then tap **Load model**. Initialization is explicit, away from the main actor, and not part of app startup. Loading can require substantial RAM; close other apps if needed. A loaded engine stays in memory until unloaded, backgrounded or the process ends.
-5. Return to Joe. Model unavailability/errors select a labeled local fallback. Existing Swift rules also bypass generation for missing CGM, stale current-glucose questions, current low/high readings and dose requests. Install and load the model before running Settings → Persona regression with synthetic data.
+4. Wait for size/SHA-256 verification, then send a message. Joe automatically loads the installed engine when generation is allowed and shows a loading indicator. The manual Load model button is optional. Initialization stays off the main actor and is not triggered at app startup. Loading still requires substantial RAM.
+5. Return to Joe. Model unavailability/errors select a labeled local fallback. Existing Swift rules also bypass generation for missing CGM, stale current-glucose questions, current low/high readings and dose requests. Install the model before running Settings → Persona regression; the regression now also waits for automatic loading.
 6. To free RAM use **Unload model**. **Remove model file** removes weights/runtime caches while retaining health records and chat logs. Health-data clearing is a separate control.
 
 The alternative import path accepts only the exact file below. Download it to Files and choose **Import supported .litertlm file**; the app copies and verifies it before use. GPU-only, MediaPipe `.task`, GGUF and other quantizations are incompatible with this pinned configuration.
@@ -46,7 +46,7 @@ Reproduce the actual runtime check on a Mac (downloads the pinned runtime if not
 python3 scripts/check_gemma_runtime.py --model /absolute/path/gemma-4-E2B-it.litertlm --output /tmp/gemma-persona.json
 ```
 
-The check extracts the production runtime actor, verifies the exact model, and runs synthetic cases through the core coordinator/validator. It never reads the app database. Use `--runtime-package /path/to/LiteRT-LM` only with a local v0.19.1 checkout. Backgrounding cancels an active generation and unloads weights; returning requires Load model again.
+The check extracts the production runtime actor, verifies the exact model, and runs synthetic cases through the core coordinator/validator. It never reads the app database. Use `--runtime-package /path/to/LiteRT-LM` only with a local v0.19.1 checkout. Backgrounding cancels generation but retains a ready engine for short switches. Idle expiry or memory pressure releases it; the next eligible message reloads automatically.
 
 ## Xcode reports missing package products
 
@@ -59,3 +59,20 @@ If both `LiteRTLM` and local `JoeCore` appear missing, inspect Report Navigator 
 The native smoke harness now includes the reported four-turn lunch conversation, preserving prior turns to exercise follow-up context. Unit checks alone cannot establish usefulness: inspect the actual replies and review on iPhone after an in-place Xcode update. Model weights do not change and need not be downloaded again.
 
 Verification: 51 core XCTest tests pass. The [recorded direct-answer run](reports/direct-answer-prompts.v1.json) includes ten persona cases plus four consecutive lunch turns using actual Gemma CPU inference. All lunch turns supplied food options; the first follow-up still repeated the prior choices, while the final follow-up offered different choices. Prompts improve task completion but do not guarantee novelty, tone or factual/clinical safety.
+
+## Automatic model lifecycle
+
+`LocalModelLifecycle` coalesces concurrent loads, leases the engine during chat/regression, and serializes unload/reload. A failed load does not create a retry loop: an error/fallback is shown and a later user request can retry. Pending installed-file verification is awaited before loading; downloads/imports remain explicit. No network or Apple Intelligence fallback is added.
+
+- Foreground idle timeout: 5 minutes after the final active use completes.
+- Background idle timeout: 2 minutes after entering background or completing the last use there, whichever is later. Brief background switches do not count earlier foreground idle as background time. Background timers are opportunistic; foreground return rechecks elapsed time.
+- Background entry cancels generation and any in-progress initialization. Memory warnings release the native engine and cancel regression/generation; returning foreground never proactively loads without a request.
+- Active uses block ordinary idle unloading. Manual unload and memory pressure are explicit cancellation/release paths. Next eligible use reloads automatically.
+
+Core lifecycle tests cover concurrency, idle release/reload, active-use protection, brief/expired background periods, failed-load recovery, canceling a waiting caller, background cancellation and unload/reload races. The native Mac check exercises the production runtime with synthetic text; iPhone 15 Pro RAM, suspension, thermal and memory-warning acceptance still require device testing.
+
+```sh
+python3 scripts/check_gemma_runtime.py --model /absolute/path/gemma-4-E2B-it.litertlm --output /tmp/gemma-lifecycle.json --lifecycle-only
+```
+
+Verification: 74 core XCTest tests and unsigned device/simulator builds pass. The [recorded native lifecycle run](reports/gemma-lifecycle-mac-smoke.v1.json) verifies real Gemma load/generation, brief background retention, idle engine release, and generation after reload. Smoke timeouts are accelerated; production uses 300/120 seconds.

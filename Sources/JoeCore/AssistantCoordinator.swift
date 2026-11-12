@@ -49,6 +49,25 @@ public struct AssistantTurnRecord: Codable, Sendable, Identifiable {
     public let latencyMilliseconds: Double
     public let regressionCaseID: String?
 }
+public extension AssistantTurnRecord {
+    var fallbackDetails: [String] {
+        let labels = [
+            "calendar_range_omitted": "The model omitted or changed the selected date range or timezone.",
+            "calendar_date_omitted": "The model omitted one or more event dates.",
+            "calendar_time_omitted": "The model omitted an event time or all-day label.",
+            "calendar_event_omitted": "The model omitted or renamed an event title.",
+            "calendar_event_date_time_mismatch": "An event was not listed with its matching date and times on the same line.",
+            "calendar_range_mismatch": "The model described the week as today.",
+            "unsupported_calendar_number": "The model included a number not supported by the calendar result.",
+            "calendar_promise_only": "The model promised to check instead of listing results.",
+            "calendar_unavailable": "The calendar result is unavailable or expired.",
+            "language_mismatch": "The response language did not match your question.",
+            "format_mismatch": "The response used unsupported formatting.",
+            "unverified_access_claim": "The model made an unverified permission claim."
+        ]
+        return validationReasons.map { labels[$0] ?? "Response check: " + $0.replacingOccurrences(of: "_", with: " ") }
+    }
+}
 @MainActor public final class AssistantCoordinator {
     public let provider: any AssistantModelProvider
     public let fallback = ExplanationFallback()

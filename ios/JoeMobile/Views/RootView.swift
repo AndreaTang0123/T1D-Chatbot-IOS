@@ -214,7 +214,7 @@ struct AssistantView: View {
                         }
                         ForEach(state.messages) { message in messageBubble(message).id(message.id) }
                         if state.isAnswering {
-                            HStack(spacing: 8) { ProgressView(); Text("Joe is thinking…").font(.subheadline).foregroundStyle(.secondary) }
+                            HStack(spacing: 8) { ProgressView(); Text(state.assistant.isLoading ? "Loading Gemma…" : "Joe is thinking…").font(.subheadline).foregroundStyle(.secondary) }
                                 .padding(14).background(.background, in: RoundedRectangle(cornerRadius: 18))
                         }
                         Color.clear.frame(height: 1).id("bottom")
@@ -253,6 +253,15 @@ struct AssistantView: View {
                             .buttonStyle(.plain).accessibilityLabel("Read Joe's message aloud")
                     }
                 }.foregroundStyle(fromJoe ? Color.secondary : Color.white.opacity(0.85))
+                if fromJoe && !message.diagnostics.isEmpty {
+                    DisclosureGroup("Why this reply used fallback") {
+                        ForEach(Array(message.diagnostics.enumerated()), id: \.offset) { _, reason in
+                            Text(reason).font(.caption).foregroundStyle(.secondary)
+                        }
+                        Text("The app used a local fallback because these checks did not pass. Rejected model wording is not shown.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }.font(.caption)
+                }
             }
             .padding(15)
             .foregroundStyle(fromJoe ? Color.primary : Color.white)
@@ -350,7 +359,7 @@ struct DataAccessSettingsView: View {
                     Text("Percentages describe observed 5-minute bins, not clinical time-in-range. Gaps are excluded, not counted as normal. Reads stay on this device; chat summaries enter local conversation logs and explicit research exports.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Calendar · Local access") {
-                    Text("Context uses event categories. Asking Joe for today’s calendar passes local event titles and times to Gemma on this device. Answers enter recent conversation history, saved chat and research exports. Event notes, attendees and locations are not included.").font(.caption).foregroundStyle(.secondary)
+                    Text("Context uses event categories. Asking Joe about calendar events passes the requested range’s local event titles and times to Gemma on this device. Answers enter recent conversation history, saved chat and research exports. Event notes, attendees and locations are not included.").font(.caption).foregroundStyle(.secondary)
                     Toggle("Collect calendar categories", isOn: Binding(get: { calendarCollection && state.calendar.hasAccess }, set: { enabled in
                         if enabled {
                             requestingCalendar = true
@@ -418,14 +427,15 @@ struct SettingsView: View {
                     } else {
                         Button(state.assistant.isLoading ? "Loading model…" : state.assistant.isLoaded ? "Model loaded" : "Load model") {
                             Task { await state.assistant.loadModel() }
-                        }.disabled(state.assistant.isLoading || state.assistant.isLoaded)
+                        }.disabled(state.assistant.isLoading || state.assistant.isUnloading || state.assistant.isLoaded)
                         Button("Unload model to free memory") { Task { await state.assistant.unloadModel() } }
-                            .disabled(state.isAnswering || state.isRunningPersonaRegression || state.assistant.isLoading)
+                            .disabled(state.isAnswering || state.isRunningPersonaRegression || state.assistant.isLoading || state.assistant.isUnloading)
                         Button("Remove model file", role: .destructive) { Task {
                             await state.assistant.unloadModel()
                             state.assistant.installation.remove()
-                        } }.disabled(state.isAnswering || state.isRunningPersonaRegression || state.assistant.isLoading)
+                        } }.disabled(state.isAnswering || state.isRunningPersonaRegression || state.assistant.isLoading || state.assistant.isUnloading)
                     }
+                    Text("Gemma loads automatically when a reply needs it. Idle models unload after 5 minutes in the foreground or 2 minutes in the background (best effort); memory warnings also release the model. Sending another message loads it again. Manual unload releases memory until the next request.").font(.caption).foregroundStyle(.secondary)
                     Text("Download once, then chat offline. No Apple Intelligence, cloud model, API key, or Mac server is used. Free at least 6 GB before installing. Your messages and health context never go to the model download host.")
                         .font(.caption).foregroundStyle(.secondary)
                 }

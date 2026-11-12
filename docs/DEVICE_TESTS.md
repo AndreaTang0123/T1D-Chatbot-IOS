@@ -96,3 +96,20 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] With Gemma unloaded and no CGM, the local fallback list still works; with Gemma loaded, verify the event list actually enters the context tool and a screened model response is displayed.
 - [ ] Disabled collection, missing full authorization, unavailable query and empty local results have distinct messages. EventKit's synchronous event query has no error callback: empty local results cannot establish remote account sync completeness.
 - [ ] Requested titles appear in saved chat and explicit exports, and in the requested local-model context/recent replay, but not lifestyle/forecast records. Review UI privacy text and clearing behavior.
+
+## Calendar week ranges
+
+- [ ] Default/calendar-this-week queries include Monday through Sunday in the device timezone, with range header and each event's date/time. Earlier days are not silently omitted.
+- [ ] Explicit today/tomorrow queries use their own local day; next-week, specified/ambiguous dates request clarification instead of substituting this week.
+- [ ] Verify Sunday and year crossover, DST, overnight/multiday/all-day events, and events exactly at the exclusive range end.
+- [ ] Missing range headers, missing event dates and swapped event dates trigger full-range local fallback. Large model contexts never cause silent event truncation.
+- [ ] Chinese “本周日历/本周日程” is interpreted as this week, not Sunday.
+
+## Automatic Gemma lifecycle acceptance
+
+- [ ] Cold launch stays responsive; sending an eligible message waits for file verification/loading, displays Loading Gemma, and then generates. A safety-only reply avoids an unnecessary load.
+- [ ] Two simultaneous requests/manual preload share one initialization. Backgrounding during initialization does not leave a ready zombie engine.
+- [ ] Brief app switching retains the model; idle expiry releases after 5 minutes foreground / 2 minutes background, with elapsed-time recheck after suspension. Active generation cannot be unloaded by the idle timer.
+- [ ] Memory warnings cancel model work and release the engine. Next eligible chat automatically reloads. Test on iPhone 15 Pro for actual memory pressure, latency and thermals.
+- [ ] Manual unload followed by a new message reloads automatically; removing weights requires an explicit new download/import. Load errors show status and do not retry continuously.
+- [ ] Persona regression automatically loads and retains one engine for the run, and cancels on background entry.

@@ -8,9 +8,10 @@ struct ChatMessage: Identifiable {
     let role: Role
     let text: String
     let timestamp: Date
-    init(role: Role, text: String, timestamp: Date = Date(), mode: String? = nil) {
-        self.role = role; self.text = text; self.timestamp = timestamp; self.mode = mode
+    init(role: Role, text: String, timestamp: Date = Date(), mode: String? = nil, diagnostics: [String] = []) {
+        self.role = role; self.text = text; self.timestamp = timestamp; self.mode = mode; self.diagnostics = diagnostics
     }
+    let diagnostics: [String]
     var mode: String? = nil
 }
 
@@ -76,7 +77,7 @@ struct ChatMessage: Identifiable {
             let recent = try store.assistantTurns(includeRegression: false).suffix(3)
             if !recent.isEmpty {
                 messages = recent.flatMap { turn in [ChatMessage(role: .user, text: turn.question, timestamp: turn.timestamp),
-                    ChatMessage(role: .joe, text: turn.response, timestamp: turn.timestamp, mode: turn.mode)] }
+                    ChatMessage(role: .joe, text: turn.response, timestamp: turn.timestamp, mode: turn.mode, diagnostics: turn.fallbackDetails)] }
             }
         } catch { warnings.append("Conversation history could not be restored.") }
         health.onChange = { [weak self] in Task { await self?.refresh() } }; health.observe()
@@ -179,7 +180,7 @@ struct ChatMessage: Identifiable {
         messages.append(ChatMessage(role: .user, text: question))
         isAnswering = true; defer { isAnswering = false }
         let intent = QuestionIntent(question)
-        calendarDay = intent.calendar && !intent.sharingExperience ? calendar.daySchedule(at: Date()) : nil
+        calendarDay = intent.calendar && !intent.sharingExperience ? calendar.daySchedule(at: Date(), question: question) : nil
         if intent.history { await refreshHealthHistory() }
         if intent.context && !intent.sharingExperience {
             // Refresh local permission-gated sources independently of Nightscout synchronization.
@@ -191,13 +192,17 @@ struct ChatMessage: Identifiable {
             live.place = location.category(at: Date())
             currentContext = live
         }
+        let preflight = assistantSnapshot(at: Date(), historyWindow: GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays))
+        let needsModel = ExplanationFallback().requiredResponse(decision: SafetyDecisionEngine(policy: preflight.policy).evaluate(cgm: preflight.currentGlucose, forecast: preflight.forecastResult), userText: question, snapshot: preflight) == nil
+        let modelUse = needsModel ? await assistant.prepareForTurn() : false
+        defer { if modelUse { assistant.finishTurn() } }
         let snapshot = assistantSnapshot(at: Date(), historyWindow: GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays))
         let history = messages.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
         let turn = await coordinator.answer(question, snapshot: snapshot, history: history)
         reply = turn.response; assistantMode = turn.mode
         do { try store.save(assistantTurn: turn) }
         catch { warnings.append("The response is shown, but its research log could not be saved.") }
-        messages.append(ChatMessage(role: .joe, text: reply, mode: assistantMode))
+        messages.append(ChatMessage(role: .joe, text: reply, mode: assistantMode, diagnostics: turn.fallbackDetails))
         if autoSpeak && !isInBackground { voiceInput.cancel(); speech.speak(reply) }
     }
     func startPersonaRegression() {
@@ -209,6 +214,9 @@ struct ChatMessage: Identifiable {
         guard !isAnswering, !isRunningPersonaRegression else { return }
         isRunningPersonaRegression = true; speech.stop(); voiceInput.cancel()
         defer { isRunningPersonaRegression = false; regressionTask = nil }
+        let modelUse = await assistant.prepareForTurn()
+        defer { if modelUse { assistant.finishTurn() } }
+        guard !Task.isCancelled else { regressionStatus = "Regression canceled."; return }
         var generated = 0; var fallbacks = 0
         for item in PersonaRegressionCase.all {
             guard !Task.isCancelled else { regressionStatus = "Regression canceled."; return }

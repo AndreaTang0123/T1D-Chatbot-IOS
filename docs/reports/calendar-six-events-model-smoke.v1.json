@@ -1,0 +1,85 @@
+{
+  "scope": "Synthetic Mac CPU Gemma reproduction: two all-day and four timed events, including overlaps; not private calendar data or iPhone performance validation",
+  "changes": [
+    "Apply the complete-list hint to today as well as week/tomorrow queries.",
+    "Place the canonical list directly in per-turn formatting guidance.",
+    "Make the persona brevity rule explicitly exempt calendar lists."
+  ],
+  "results": [
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v10; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "F4AD95C8-90DE-45C2-8656-6F073EA1BEE7",
+      "latencyMilliseconds": 8685.242375,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v2",
+        "persona": "joe.persona.v4",
+        "safety": "joe.safety.v2"
+      },
+      "question": "What's on my calendar this week?",
+      "regressionCaseID": "en-calendar-week",
+      "response": "Calendar range: 2026-11-09 through 2026-11-15 (GMT)\n• 2026-11-09 10:00–11:00 — Research meeting\n• 2026-11-11 18:00–19:00 — Ballet class\nYou have a research meeting on the 9th and a ballet class on the 11th.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-12T15:39:33Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v6"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v10; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "id": "BF631197-3B3D-4674-BFCB-3F9CC0C7810F",
+      "latencyMilliseconds": 9622.744958,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v2",
+        "persona": "joe.persona.v4",
+        "safety": "joe.safety.v2"
+      },
+      "question": "What's on my calendar today?",
+      "regressionCaseID": "en-calendar-six-events",
+      "response": "Calendar range: 2026-11-12 through 2026-11-12 (GMT)\n• 2026-11-12 All day — No-meeting day\n• 2026-11-12 All day — Team member - PTO\n• 2026-11-12 09:30–10:45 — Class\n• 2026-11-12 10:30–11:00 — TRAINING WIRE\n• 2026-11-12 13:00–14:30 — Research Meeting\n• 2026-11-12 16:30–17:00 — Private Appointment\nYou have a busy day with classes, a training wire, a research meeting, and a private appointment.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-12T15:39:33Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v6"
+    }
+  ],
+  "notes": [
+    "Both the weekly and six-event today replies passed unchanged event/date/time screening.",
+    "Synthetic names were used. Raw rejected model replies are not retained.",
+    "A passing synthetic run does not guarantee every real calendar response will pass."
+  ]
+}

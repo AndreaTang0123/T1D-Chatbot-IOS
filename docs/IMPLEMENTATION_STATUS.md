@@ -46,7 +46,7 @@ Joe is the default tab and displays a session conversation with a bottom text/vo
 
 ## Safety/prompt architecture plan
 
-The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/explicit Gemma loading, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 48 XCTest checks pass; a ten-case Mac Gemma run produced nine screened replies and one rejection fallback; iPhone generation and manual persona review remain pending. The committed regression report is explicitly a deterministic/fake-provider run.
+The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/on-demand automatic Gemma loading, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 74 XCTest checks pass; a ten-case Mac Gemma run produced nine screened replies and one rejection fallback; iPhone generation and manual persona review remain pending. The committed regression report is explicitly a deterministic/fake-provider run.
 
 ## Remaining work
 
@@ -85,3 +85,7 @@ See [README](../README.md), [DEVICE_TESTS](DEVICE_TESTS.md), and [FEATURE_SCHEMA
 ## Gemma migration
 
 See [Gemma setup](GEMMA_SETUP.md). The dependency and model revision/hash are pinned; 48 core tests pass including integrity rejection and tool-payload routing. Device and simulator build verification is recorded in the setup document. On-device speed, peak memory, thermal behavior, voice audibility and model persona quality still require iPhone 15 Pro acceptance testing. This change ports prompting and orchestration; it does not fine-tune weights or add LoRA.
+
+## Automatic Gemma lifecycle
+
+Eligible chat requests and synthetic regression wait for installed-file verification and a shared automatic load; launch alone does not initialize weights. Active-use leases protect generation from idle release. Foreground idle is 5 minutes; background idle is 2 minutes, with foreground elapsed-time recheck because iOS may suspend timers. Background entry cancels active generation/initialization but retains an already-ready idle engine for brief switches. Memory warnings release it. The next eligible request reloads automatically; failed loads do not loop. Manual load/unload remain available. Native Mac load/generate/idle-release/reload verification passes; actual iPhone suspension/memory-pressure behavior remains an acceptance check.

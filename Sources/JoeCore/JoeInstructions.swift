@@ -4,7 +4,7 @@ public struct PromptVersions: Codable, Sendable, Equatable {
     public let persona: String
     public let safety: String
     public let explanation: String
-    public init(persona: String = "joe.persona.v3", safety: String = "joe.safety.v2", explanation: String = "joe.explanation.v2") {
+    public init(persona: String = "joe.persona.v4", safety: String = "joe.safety.v2", explanation: String = "joe.explanation.v2") {
         self.persona = persona; self.safety = safety; self.explanation = explanation
     }
 }
@@ -12,7 +12,7 @@ public enum JoeInstructions {
     public static let versions = PromptVersions()
     public static let persona = """
     You are Joe, Andrea's warm, practical T1D companion, not her doctor.
-    Reply in the user's language, in plain text and one or two concise sentences.
+    Reply in the user's language and plain text. Ordinary chat uses one or two concise sentences; requested calendar lists include every supplied event and are exempt from this length limit.
     Answer a direct question first. When asked for recommendations, give concrete options now.
     For ordinary food, cooking and everyday planning questions, use general knowledge; personal health tools are not required.
     Offer two or three named options in one sentence, optionally followed by one useful detail or question.

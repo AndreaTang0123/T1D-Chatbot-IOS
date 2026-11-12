@@ -6,7 +6,7 @@ public struct ResponseValidation: Codable, Sendable, Equatable {
 }
 /// Conservative regression-tested screening, not a proof of clinical correctness.
 public struct ResponseValidator: Sendable {
-    public static let version = "joe.response-validator.v5"
+    public static let version = "joe.response-validator.v6"
     public init() {}
     public func validate(_ text: String, userText: String, decision: SafetyDecision,
                          snapshot: AssistantSnapshot, evidence: Set<ToolKind>) -> ResponseValidation {
@@ -26,8 +26,10 @@ public struct ResponseValidator: Sendable {
             matches("(\u{6ce8}\u{5c04}|\u{6253}|\u{8865}|\u{52a0}).{0,8}[0-9\u{4e00}\u{4e8c}\u{4e09}\u{56db}\u{4e94}\u{516d}\u{4e03}\u{516b}\u{4e5d}\u{5341}]+.{0,4}(\u{5355}\u{4f4d}|u)") { reasons.append("treatment_recommendation") }
         if dayQuery, let day = snapshot.calendarDay {
             if !evidence.contains(.context) { reasons.append("calendar_without_tool") }
+            if day.scope != .today && !text.contains(day.rangeHeader) { reasons.append("calendar_range_omitted") }
+            if day.scope == .thisWeek && has(["today's events", "calendar for today", "今天的日程", "今天的事件"]) { reasons.append("calendar_range_mismatch") }
             let canonical = day.response(language: language, at: snapshot.now).lowercased()
-            if day.status != .available || day.events.isEmpty || snapshot.now >= day.dayEnd { reasons.append("calendar_unavailable") }
+            if day.status != .available || day.events.isEmpty || !day.isValid(at: snapshot.now) { reasons.append("calendar_unavailable") }
             for event in day.events {
                 let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
                 if !title.isEmpty && !lower.contains(title) { reasons.append("calendar_event_omitted") }
@@ -37,6 +39,21 @@ public struct ResponseValidator: Sendable {
             let regex = try! NSRegularExpression(pattern: timePattern)
             let expectedTimes = regex.matches(in: canonical, range: NSRange(canonical.startIndex..., in: canonical)).compactMap { Range($0.range, in: canonical).map { String(canonical[$0]) } }
             if expectedTimes.contains(where: { !lower.contains($0) }) { reasons.append("calendar_time_omitted") }
+            let dateRegex = try! NSRegularExpression(pattern: #"\d{4}-\d{2}-\d{2}"#)
+            let expectedDates = dateRegex.matches(in: canonical, range: NSRange(canonical.startIndex..., in: canonical)).compactMap { Range($0.range, in: canonical).map { String(canonical[$0]) } }
+            if day.scope != .today && expectedDates.contains(where: { !lower.contains($0) }) { reasons.append("calendar_date_omitted") }
+            if day.scope == .thisWeek || day.scope == .tomorrow {
+                let date = DateFormatter(); date.locale = Locale(identifier: "en_US_POSIX"); date.timeZone = day.timeZone; date.dateFormat = "yyyy-MM-dd"
+                let clock = DateFormatter(); clock.locale = date.locale; clock.timeZone = day.timeZone; clock.dateFormat = "HH:mm"
+                for event in day.events {
+                    let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                    let rows = lower.components(separatedBy: "\n").filter { $0.contains(title) }
+                    let eventDate = date.string(from: max(day.dayStart, event.start))
+                    if !rows.contains(where: { row in row.contains(eventDate) && (event.allDay ? (row.contains("all day") || row.contains("全天")) : row.contains(clock.string(from: event.start)) && row.contains(clock.string(from: event.end))) }) {
+                        reasons.append("calendar_event_date_time_mismatch")
+                    }
+                }
+            }
             let supported = Self.numbers(canonical)
             if Self.numbers(text).contains(where: { !supported.contains($0) }) { reasons.append("unsupported_calendar_number") }
             if has(["i can check", "i will check", "i'll check", "open your calendar", "我可以查看", "我会查看"]) { reasons.append("calendar_promise_only") }

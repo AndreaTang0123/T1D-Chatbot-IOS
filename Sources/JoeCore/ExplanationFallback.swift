@@ -8,7 +8,7 @@ public struct ExplanationFallback: Sendable {
         if intent.calendar && !intent.sharingExperience && !intent.glucose && !intent.forecast && !intent.insulin {
             guard let day = snapshot.calendarDay else { return generalResponse(userText: userText, snapshot: snapshot) }
             // A successful day query is independent of CGM availability. Missing/error states use exact app text.
-            if day.status != .available || day.events.isEmpty || snapshot.now < day.dayStart || snapshot.now >= day.dayEnd {
+            if day.status != .available || day.events.isEmpty || !day.isValid(at: snapshot.now) {
                 return day.response(language: ReplyLanguage(text: userText), at: snapshot.now)
             }
             return nil
@@ -27,7 +27,7 @@ public struct ExplanationFallback: Sendable {
         if intent.dose { return dose(language: language) }
         if intent.calendar && !intent.sharingExperience && !intent.glucose && !intent.forecast && !intent.insulin {
             return snapshot.calendarDay?.response(language: language, at: snapshot.now)
-                ?? (language == .chinese ? "尚未读取当天日历，请重试。" : "Today's calendar has not been read. Please retry.")
+                ?? (language == .chinese ? "尚未读取所需范围的日历，请重试。" : "The requested calendar range has not been read. Please retry.")
         }
         if intent.tools == [.history] {
             return snapshot.glucoseHistory?.description(language: language) ?? (language == .chinese ? "没有可读取的 Apple 健康历史血糖；请启用 Dexcom 到 Apple 健康的同步，并授权 Joe 读取血糖。空结果也可能表示未授权或没有记录。" : "No Apple Health glucose history is visible. Enable Dexcom sharing to Apple Health and allow Joe to read blood glucose; empty results can also mean denied access or no records.")

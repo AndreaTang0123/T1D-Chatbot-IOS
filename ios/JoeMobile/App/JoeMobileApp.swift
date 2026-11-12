@@ -12,6 +12,10 @@ import BackgroundTasks
                 else if let startupError { ContentUnavailableView("Unable to open the local database", systemImage: "externaldrive.badge.exclamationmark", description: Text(startupError)) }
                 else { ProgressView("Opening Joe…") }
             }
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)) { _ in
+                state?.cancelPersonaRegression()
+                Task { await state?.assistant.memoryPressure() }
+            }
             .task {
                 guard state == nil, startupError == nil else { return }
                 do { state = AppState(store: try LocalStore()); await state?.refresh(); scheduleRefresh() }
@@ -19,12 +23,12 @@ import BackgroundTasks
             }
         }
         .onChange(of: phase) { _, phase in
-            if phase == .active { state?.isInBackground = false; Task { await state?.refresh() } }
+            if phase == .active { state?.isInBackground = false; state?.assistant.sceneChanged(background: false); Task { await state?.refresh() } }
             if phase == .inactive, state?.voiceInput.isPreparing == false { state?.voiceInput.cancel(); state?.speech.stop() }
             if phase == .background {
                 state?.isInBackground = true
                 state?.cancelPersonaRegression(); state?.voiceInput.cancel(); state?.speech.stop()
-                Task { await state?.assistant.unloadModel() }
+                state?.assistant.sceneChanged(background: true)
             }
             if phase == .background { scheduleRefresh() }
         }
