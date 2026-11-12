@@ -4,6 +4,7 @@ import JoeCore
 
 @MainActor final class CalendarService {
     private let store = EKEventStore()
+    var hasAccess: Bool { EKEventStore.authorizationStatus(for: .event) == .fullAccess }
     var enabled: Bool { UserDefaults.standard.bool(forKey: "calendarEnabled") }
     struct Snapshot {
         var current: String?

@@ -86,6 +86,11 @@ import XCTest
         XCTAssertEqual(QuestionIntent("\u{6211}\u{4e00}\u{5c0f}\u{65f6}\u{540e}\u{8981}\u{4e0a}\u{8bfe}").tools, [])
         XCTAssertEqual(QuestionIntent("What is my next class?").tools, [.context])
     }
+    func testCalendarAndLocationQuestionsSelectContext() {
+        for question in ["Do you have access to my location?", "What is on my schedule?", "Any appointments?", "我的位置在哪里？", "我在哪里", "今天的日程"] {
+            XCTAssertTrue(QuestionIntent(question).tools.contains(.context), question)
+        }
+    }
     func testNoDataAndStaleQuestionsBypassModel() async {
         let model = FakeAssistantModel(); let coordinator = AssistantCoordinator(provider: model)
         let noData = await coordinator.answer("What is my glucose?", snapshot: snapshot(value: nil), history: [])

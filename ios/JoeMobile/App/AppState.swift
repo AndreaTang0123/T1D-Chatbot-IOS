@@ -175,7 +175,18 @@ struct ChatMessage: Identifiable {
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
         messages.append(ChatMessage(role: .user, text: question))
         isAnswering = true; defer { isAnswering = false }
-        if QuestionIntent(question).history { await refreshHealthHistory() }
+        let intent = QuestionIntent(question)
+        if intent.history { await refreshHealthHistory() }
+        if intent.context && !intent.sharingExperience {
+            // Refresh local permission-gated sources independently of Nightscout synchronization.
+            location.refresh()
+            let now = Date()
+            calendarSnapshot = calendar.snapshot(at: now)
+            var live = await health.snapshot(at: now)
+            live.calendar = calendarSnapshot.current
+            live.place = location.category(at: Date())
+            currentContext = live
+        }
         let snapshot = assistantSnapshot(at: Date(), historyWindow: GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays))
         let history = messages.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
         let turn = await coordinator.answer(question, snapshot: snapshot, history: history)

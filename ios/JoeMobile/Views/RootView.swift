@@ -308,14 +308,26 @@ struct DataAccessSettingsView: View {
     @Bindable var state: AppState
     @State private var status: String?
     @State private var place = "home"
+    @AppStorage("healthEnabled") private var healthCollection = false
+    @AppStorage("calendarEnabled") private var calendarCollection = false
+    @AppStorage("locationEnabled") private var locationCollection = false
+    @AppStorage("backgroundLocationEnabled") private var backgroundLocationCollection = false
+    @State private var requestingHealth = false
+    @State private var requestingCalendar = false
     var body: some View {
         Group {
                 Section("HealthKit · Read-only access") {
-                    Button("Enable glucose history, steps, heart rate, sleep, and workouts") { Task {
-                        do { try await state.health.authorize(); await state.refresh() }
-                        catch { status = "HealthKit authorization request failed" }
-                    } }
-                    Button("Pause HealthKit collection") { state.health.disable(); Task { await state.refresh() } }
+                    Toggle("Collect Apple Health data", isOn: Binding(get: { healthCollection }, set: { enabled in
+                        if enabled {
+                            requestingHealth = true
+                            Task { @MainActor in
+                                defer { requestingHealth = false }
+                                do { try await state.health.authorize(); await state.refresh() }
+                                catch { status = "HealthKit authorization request failed. Check access in iPhone Settings." }
+                            }
+                        } else { state.health.disable(); Task { await state.refresh() } }
+                    })).disabled(requestingHealth)
+                    if requestingHealth { ProgressView("Requesting Health access…") }
                     LabeledContent("Steps in the last 30 min", value: state.context?.steps.map { String(Int($0)) } ?? "Missing")
                     LabeledContent("Heart rate", value: state.context?.heartRate.map { "\(Int($0)) bpm" } ?? "Missing")
                     LabeledContent("Most recent sleep", value: state.context?.sleepHours.map { String(format: "%.1f hours", $0) } ?? "Missing")
@@ -338,20 +350,30 @@ struct DataAccessSettingsView: View {
                     Text("Percentages describe observed 5-minute bins, not clinical time-in-range. Gaps are excluded, not counted as normal. Reads stay on this device; chat summaries enter local conversation logs and explicit research exports.").font(.caption).foregroundStyle(.secondary)
                 }
                 Section("Calendar · Categories only") {
-                    Button("Enable calendar access") { Task {
-                        do { status = try await state.calendar.authorize() ? "Calendar enabled" : "Calendar access not granted"; await state.refresh() }
-                        catch { status = "Calendar authorization request failed" }
-                    } }
-                    Button("Pause calendar collection") { UserDefaults.standard.set(false, forKey: "calendarEnabled"); Task { await state.refresh() } }
+                    Toggle("Collect calendar categories", isOn: Binding(get: { calendarCollection && state.calendar.hasAccess }, set: { enabled in
+                        if enabled {
+                            requestingCalendar = true
+                            Task { @MainActor in
+                                defer { requestingCalendar = false }
+                                do { status = try await state.calendar.authorize() ? "Calendar enabled" : "Calendar access not granted. Check iPhone Settings."; await state.refresh() }
+                                catch { status = "Calendar authorization request failed" }
+                            }
+                        } else { calendarCollection = false; Task { await state.refresh() } }
+                    })).disabled(requestingCalendar)
+                    if requestingCalendar { ProgressView("Requesting calendar access…") }
                     LabeledContent("Current", value: state.context?.calendar ?? "No visible events / Access unavailable")
                     LabeledContent("Next event", value: state.calendarSnapshot.next ?? "No visible events")
                     if let date = state.calendarSnapshot.nextStart { Text("Next event: " + date.formatted(date: .omitted, time: .shortened)) }
                 }
                 Section("Location · Low power") {
-                    Button("Enable location while using the app") { state.location.authorize() }
-                    Button("Allow background Visits / geofences (optional)") { state.location.enableBackgroundVisits() }
+                    Toggle("Collect location while using Joe", isOn: Binding(
+                        get: { locationCollection && state.location.hasAccess },
+                        set: { if $0 { state.location.authorize() } else { state.location.disable() } }))
+                    Toggle("Background visits and geofences", isOn: Binding(
+                        get: { backgroundLocationCollection && locationCollection && state.location.authorization == .authorizedAlways },
+                        set: { if $0 { state.location.enableBackgroundVisits() } else { state.location.disableBackgroundVisits() } }))
+                        .disabled(!locationCollection || !state.location.hasAccess)
                     Button("Refresh current place category") { state.location.refresh() }
-                    Button("Pause location collection") { state.location.disable() }
                     LabeledContent("Latest category", value: state.location.category ?? "Unknown")
                     Picker("Named place", selection: $place) {
                         ForEach(["home", "school", "work", "gym", "restaurant", "other"], id: \.self) { Text($0) }
@@ -363,7 +385,12 @@ struct DataAccessSettingsView: View {
                     Text("Coordinates are saved only for places you explicitly name. Visit records contain categories and times, not routes. iOS controls background updates.").font(.caption).foregroundStyle(.secondary)
                     if let message = state.location.message { Text(message).foregroundStyle(.orange) }
                 }
-            if let status { Section { Text(status).font(.footnote).foregroundStyle(.secondary) } }
+            Section {
+                Text("Switches control collection in Joe. Turning them off pauses collection; it does not revoke iOS permissions or delete saved records. Health read permissions are private to iOS, so an enabled Health switch does not prove every data type was granted.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Link("Manage system permissions", destination: URL(string: UIApplication.openSettingsURLString)!)
+                if let status { Text(status).font(.footnote).foregroundStyle(.secondary) }
+            }
         }
     }
 }

@@ -81,3 +81,11 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Record peak memory, load latency, first-token/end-to-end latency, thermal state and battery impact on iPhone 15 Pro. A successful Mac smoke test does not establish iPhone performance.
 - [ ] With fresh synthetic regression data and airplane mode, run all ten cases in English/Mandarin; inspect rejected replies and tool-evidence logs. Thinking/template tokens are never shown.
 - [ ] Background during installation/generation, return after memory pressure, and test repeated load/unload. Do not assume an in-progress foreground download survives suspension.
+
+## Permission collection switches
+
+- [ ] Settings uses switches for Apple Health collection, calendar categories, foreground location and optional background visits/geofences.
+- [ ] Enabling a switch requests the relevant iOS authorization when needed. Calendar/location denial leaves the effective switch off and offers a system-settings link; Health read denial remains undisclosed by iOS and is not claimed as granted.
+- [ ] Health/calendar switches cannot be changed while their authorization request is pending. Changes remain visible after reopening Settings.
+- [ ] Turning collection off stops the relevant observers/monitoring without deleting records or claiming to revoke iOS permission. Turning background location off stops Visits, significant changes and region monitoring while retaining foreground collection.
+- [ ] When Always location permission is already granted, background collection still requires its own enabled switch; saving a named place does not restart disabled monitoring.
