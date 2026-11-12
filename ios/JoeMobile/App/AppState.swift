@@ -163,12 +163,15 @@ struct ChatMessage: Identifiable {
         AssistantSnapshot(glucose: glucose.last, forecast: forecast, treatments: treatments,
             context: currentContext ?? context, now: now, policy: SafetyPolicy(cgmStaleSeconds: staleMinutes*60),
             nextEventCategory: calendarSnapshot.next, nextEventStart: calendarSnapshot.nextStart,
-            currentEventEnd: calendarSnapshot.currentEnd, glucoseHistory: GlucoseHistorySummary(samples: healthGlucoseHistory, days: historyWindow ?? historyDays, now: now))
+            currentEventEnd: calendarSnapshot.currentEnd, glucoseHistory: GlucoseHistorySummary(samples: healthGlucoseHistory, days: historyWindow ?? historyDays, now: now),
+            contextAccess: ["calendar": !calendar.enabled ? "collection_disabled" : calendar.hasAccess ? "authorized" : "not_authorized",
+                            "location": !location.collectionEnabled ? "collection_disabled" : location.hasAccess ? "authorized" : "not_authorized"], calendarDay: calendarDay)
     }
     func safetyDecision(at now: Date) -> SafetyDecision {
         let snapshot = assistantSnapshot(at: now)
         return SafetyDecisionEngine(policy: snapshot.policy).evaluate(cgm: snapshot.currentGlucose, forecast: snapshot.forecastResult)
     }
+    private var calendarDay: CalendarDayResult?
     var isInBackground = false
     func ask(_ text: String) async {
         guard !isAnswering, !isRunningPersonaRegression, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -176,6 +179,7 @@ struct ChatMessage: Identifiable {
         messages.append(ChatMessage(role: .user, text: question))
         isAnswering = true; defer { isAnswering = false }
         let intent = QuestionIntent(question)
+        calendarDay = intent.calendar && !intent.sharingExperience ? calendar.daySchedule(at: Date()) : nil
         if intent.history { await refreshHealthHistory() }
         if intent.context && !intent.sharingExperience {
             // Refresh local permission-gated sources independently of Nightscout synchronization.
@@ -236,6 +240,7 @@ struct ChatMessage: Identifiable {
             health.disable(); UserDefaults.standard.set(false, forKey: "calendarEnabled"); location.forgetAll(); voiceInput.cancel(); speech.stop()
             if let exportURL { try? FileManager.default.removeItem(at: exportURL) }; exportURL = nil
             healthGlucoseHistory = []; healthHistoryStatus = "Health collection paused."
+            calendarDay = nil
             connected = false; glucose = []; treatments = []; context = nil; currentContext = nil; forecast = nil
             matchedCount = 0; mae30 = nil; mae60 = nil; lastSync = nil; warnings = []; syncError = nil
             syncStatus = "Local data cleared"; forecastStatus = "Waiting for CGM data"; reply = "Local records have been cleared."

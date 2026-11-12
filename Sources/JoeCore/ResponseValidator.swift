@@ -6,7 +6,7 @@ public struct ResponseValidation: Codable, Sendable, Equatable {
 }
 /// Conservative regression-tested screening, not a proof of clinical correctness.
 public struct ResponseValidator: Sendable {
-    public static let version = "joe.response-validator.v3"
+    public static let version = "joe.response-validator.v5"
     public init() {}
     public func validate(_ text: String, userText: String, decision: SafetyDecision,
                          snapshot: AssistantSnapshot, evidence: Set<ToolKind>) -> ResponseValidation {
@@ -18,11 +18,29 @@ public struct ResponseValidator: Sendable {
         if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { reasons.append("empty_response") }
         if ReplyLanguage(text: text) != language { reasons.append("language_mismatch") }
         let endings = (try? NSRegularExpression(pattern: "[.!?。！？]+(?:\\s|$)").numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))) ?? 0
-        if endings > 2 || text.count > (language == .chinese ? 260 : 650) { reasons.append("not_brief") }
+        let dayQuery = intent.calendar && !intent.glucose && !intent.forecast && !intent.insulin && !intent.dose && snapshot.calendarDay != nil
+        if !dayQuery && (endings > 2 || text.count > (language == .chinese ? 260 : 650)) { reasons.append("not_brief") }
         if text.contains("**") || text.contains("```") || text.unicodeScalars.contains(where: { $0.properties.isEmojiPresentation }) { reasons.append("format_mismatch") }
         if matches("\\b(take|inject|give|administer|increase|decrease|adjust|set|deliver|use|add|reduce|consider|try)\\b.{0,55}\\b(insulin|units?|bolus|basal|pump|u)\\b") ||
             matches("(\u{5efa}\u{8bae}|\u{5e94}\u{8be5}|\u{9700}\u{8981}|\u{53ef}\u{4ee5}|\u{8bf7}|\u{8bd5}\u{8bd5}).{0,20}(\u{6ce8}\u{5c04}|\u{6253}|\u{589e}\u{52a0}|\u{51cf}\u{5c11}|\u{8c03}\u{6574}|\u{80f0}\u{5c9b}\u{7d20}|\u{57fa}\u{7840}\u{7387}|\u{6cf5})") ||
             matches("(\u{6ce8}\u{5c04}|\u{6253}|\u{8865}|\u{52a0}).{0,8}[0-9\u{4e00}\u{4e8c}\u{4e09}\u{56db}\u{4e94}\u{516d}\u{4e03}\u{516b}\u{4e5d}\u{5341}]+.{0,4}(\u{5355}\u{4f4d}|u)") { reasons.append("treatment_recommendation") }
+        if dayQuery, let day = snapshot.calendarDay {
+            if !evidence.contains(.context) { reasons.append("calendar_without_tool") }
+            let canonical = day.response(language: language, at: snapshot.now).lowercased()
+            if day.status != .available || day.events.isEmpty || snapshot.now >= day.dayEnd { reasons.append("calendar_unavailable") }
+            for event in day.events {
+                let title = event.title.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+                if !title.isEmpty && !lower.contains(title) { reasons.append("calendar_event_omitted") }
+            }
+            if day.events.contains(where: { $0.allDay }) && !has(["all day", "全天"]) { reasons.append("calendar_time_omitted") }
+            let timePattern = #"\b[0-2]?[0-9]:[0-5][0-9]\b"#
+            let regex = try! NSRegularExpression(pattern: timePattern)
+            let expectedTimes = regex.matches(in: canonical, range: NSRange(canonical.startIndex..., in: canonical)).compactMap { Range($0.range, in: canonical).map { String(canonical[$0]) } }
+            if expectedTimes.contains(where: { !lower.contains($0) }) { reasons.append("calendar_time_omitted") }
+            let supported = Self.numbers(canonical)
+            if Self.numbers(text).contains(where: { !supported.contains($0) }) { reasons.append("unsupported_calendar_number") }
+            if has(["i can check", "i will check", "i'll check", "open your calendar", "我可以查看", "我会查看"]) { reasons.append("calendar_promise_only") }
+        }
         if matches("(glucose|blood sugar).{0,80}(because|due to|caused by)") || matches("(caused|causes|made).{0,50}(glucose|blood sugar)") || has(["\u{5bfc}\u{81f4}", "\u{80af}\u{5b9a}\u{662f}", "\u{4e00}\u{5b9a}\u{662f}"]) { reasons.append("causal_claim") }
         let mentionsForecast = has(["forecast", "predict", "\u{9884}\u{6d4b}"])
         let mentionsGlucose = has(["glucose", "blood sugar", "mg/dl", "\u{8840}\u{7cd6}"])
@@ -36,6 +54,11 @@ public struct ResponseValidator: Sendable {
         if mentionsGlucose && !evidence.contains(.glucose) && !evidence.contains(.forecast) && !evidence.contains(.history) { reasons.append("glucose_without_tool") }
         if mentionsInsulin && !evidence.contains(.insulin) { reasons.append("insulin_without_tool") }
         if contextAssertion && !evidence.contains(.context) { reasons.append("context_without_tool") }
+        let deniesAccess = has(["don't have access", "do not have access", "no access", "cannot access", "can't access", "permission denied", "not authorized", "没有权限", "无权访问", "无法访问", "未授权", "没有访问权限"])
+        if deniesAccess && (intent.context || has(["calendar", "location", "日历", "位置"])) {
+            // Empty data is not evidence of denied permission. Even with known denial, use app-authored status text.
+            reasons.append("unverified_access_claim")
+        }
         let cgm = snapshot.currentGlucose; let forecast = snapshot.forecastResult
         let unavailableWords = has(["unknown", "unavailable", "no current", "not current", "cannot", "can't", "no reading", "missing", "\u{672a}\u{77e5}", "\u{4e0d}\u{53ef}\u{7528}", "\u{6ca1}\u{6709}", "\u{4e0d}\u{80fd}", "\u{7f3a}\u{5931}"])
         if mentionsGlucose && cgm.status != .fresh && !mentionsForecast && !unavailableWords && !has(["stale", "historical", "last reading", "\u{8fc7}\u{671f}", "\u{5386}\u{53f2}", "\u{4e0a}\u{6b21}"]) { reasons.append("stale_or_missing_as_current") }
@@ -63,6 +86,9 @@ public struct ResponseValidator: Sendable {
         }
         let numbers = Self.numbers(text)
         var supported: [Double] = []
+        if dayQuery, evidence.contains(.context), let day = snapshot.calendarDay {
+            supported += Self.numbers(day.response(language: language, at: snapshot.now))
+        }
         if evidence.contains(.history), let h = snapshot.glucoseHistory {
             supported += h.supportedNumbers
             if !has(["historical", "history", "delayed", "历史", "延迟"]) { reasons.append("history_without_delay_label") }

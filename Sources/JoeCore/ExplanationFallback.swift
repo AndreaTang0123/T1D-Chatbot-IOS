@@ -5,6 +5,14 @@ public struct ExplanationFallback: Sendable {
     public func requiredResponse(decision: SafetyDecision, userText: String, snapshot: AssistantSnapshot) -> String? {
         let intent = QuestionIntent(userText)
         if intent.dose { return dose(language: ReplyLanguage(text: userText)) }
+        if intent.calendar && !intent.sharingExperience && !intent.glucose && !intent.forecast && !intent.insulin {
+            guard let day = snapshot.calendarDay else { return generalResponse(userText: userText, snapshot: snapshot) }
+            // A successful day query is independent of CGM availability. Missing/error states use exact app text.
+            if day.status != .available || day.events.isEmpty || snapshot.now < day.dayStart || snapshot.now >= day.dayEnd {
+                return day.response(language: ReplyLanguage(text: userText), at: snapshot.now)
+            }
+            return nil
+        }
         if intent.tools == [.history] { return snapshot.glucoseHistory == nil ? generalResponse(userText: userText, snapshot: snapshot) : nil }
         switch decision {
         case .noData: return generalResponse(userText: userText, snapshot: snapshot)
@@ -17,6 +25,10 @@ public struct ExplanationFallback: Sendable {
     public func generalResponse(userText: String, snapshot: AssistantSnapshot) -> String {
         let intent = QuestionIntent(userText); let language = ReplyLanguage(text: userText)
         if intent.dose { return dose(language: language) }
+        if intent.calendar && !intent.sharingExperience && !intent.glucose && !intent.forecast && !intent.insulin {
+            return snapshot.calendarDay?.response(language: language, at: snapshot.now)
+                ?? (language == .chinese ? "尚未读取当天日历，请重试。" : "Today's calendar has not been read. Please retry.")
+        }
         if intent.tools == [.history] {
             return snapshot.glucoseHistory?.description(language: language) ?? (language == .chinese ? "没有可读取的 Apple 健康历史血糖；请启用 Dexcom 到 Apple 健康的同步，并授权 Joe 读取血糖。空结果也可能表示未授权或没有记录。" : "No Apple Health glucose history is visible. Enable Dexcom sharing to Apple Health and allow Joe to read blood glucose; empty results can also mean denied access or no records.")
         }
@@ -66,11 +78,12 @@ public struct ExplanationFallback: Sendable {
         let c = snapshot.currentContext
         guard c.freshness == .fresh else { return language == .chinese ? "\u{76ee}\u{524d}\u{6ca1}\u{6709}\u{8fd1}\u{671f}\u{53ef}\u{7528}\u{7684}\u{751f}\u{6d3b}\u{6570}\u{636e}，\u{6211}\u{4e0d}\u{4f1a}\u{731c}\u{6d4b}。" : "No recent lifestyle data is available; I won't guess." }
         var parts: [String] = []
+        if let place = c.placeCategory { parts.append(language == .chinese ? "地点类别：\(place)" : "place category: \(place)") }
         if let steps = c.stepsLast30m { parts.append(language == .chinese ? "\u{8fd1}30\u{5206}\u{949f}\u{6b65}\u{6570}\u{4e3a}\(number(steps))" : "steps in the last 30 minutes: \(number(steps))") }
         if let sleep = c.sleepHoursLastNight { parts.append(language == .chinese ? "\u{6700}\u{8fd1}\u{7761}\u{7720}\u{4e3a}\(number(sleep))\u{5c0f}\u{65f6}" : "latest sleep: \(number(sleep)) hours") }
         if let category = c.currentEventCategory { parts.append(language == .chinese ? "\u{5f53}\u{524d}\u{65e5}\u{7a0b}\u{7c7b}\u{522b}\u{4e3a}\(category)" : "current event category: \(category)") }
         if let next = c.minutesUntilNextEvent { parts.append(language == .chinese ? "\u{4e0b}\u{9879}\u{65e5}\u{7a0b}\u{8fd8}\u{6709}\(next)\u{5206}\u{949f}" : "next event in \(next) minutes") }
-        guard !parts.isEmpty else { return language == .chinese ? "\u{5f53}\u{524d}\u{751f}\u{6d3b}\u{6570}\u{636e}\u{4e0d}\u{5b8c}\u{6574}，\u{6211}\u{4e0d}\u{4f1a}\u{731c}\u{6d4b}\u{7f3a}\u{5931}\u{5185}\u{5bb9}。" : "Current lifestyle data is incomplete; I won't guess missing details." }
+        guard !parts.isEmpty else { return language == .chinese ? "\u{5f53}\u{524d}\u{751f}\u{6d3b}\u{6570}\u{636e}\u{4e0d}\u{5b8c}\u{6574}，\u{6211}\u{4e0d}\u{4f1a}\u{731c}\u{6d4b}\u{7f3a}\u{5931}\u{5185}\u{5bb9}。" : "No current event or place category is available. Empty results do not mean permission was denied." }
         return parts.prefix(3).joined(separator: language == .chinese ? "；" : "; ") + (language == .chinese ? "；\u{8fd9}\u{4e9b}\u{5173}\u{8054}\u{4e0d}\u{8bf4}\u{660e}\u{56e0}\u{679c}。" : "; these associations do not establish causation.")
     }
 }

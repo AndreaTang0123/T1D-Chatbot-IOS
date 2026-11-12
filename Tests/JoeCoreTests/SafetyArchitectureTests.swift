@@ -86,6 +86,14 @@ import XCTest
         XCTAssertEqual(QuestionIntent("\u{6211}\u{4e00}\u{5c0f}\u{65f6}\u{540e}\u{8981}\u{4e0a}\u{8bfe}").tools, [])
         XCTAssertEqual(QuestionIntent("What is my next class?").tools, [.context])
     }
+    func testAccessMetadataSurvivesFreshnessRecheckAndDenialsAreScreened() throws {
+        let s = AssistantSnapshot(glucose: snapshot().glucose, forecast: nil, treatments: [], context: LifestyleContext(timestamp: now), now: now,
+                                  contextAccess: ["calendar": "authorized", "location": "authorized"])
+        XCTAssertEqual(s.rechecked(at: now.addingTimeInterval(10)).currentContext.access["calendar"], "authorized")
+        XCTAssertNil(s.currentContext.currentEventCategory)
+        let result = ResponseValidator().validate("I don't have access to your calendar.", userText: "What is on my calendar?", decision: .normal, snapshot: s, evidence: [.context])
+        XCTAssertTrue(result.reasons.contains("unverified_access_claim"))
+    }
     func testCalendarAndLocationQuestionsSelectContext() {
         for question in ["Do you have access to my location?", "What is on my schedule?", "Any appointments?", "我的位置在哪里？", "我在哪里", "今天的日程"] {
             XCTAssertTrue(QuestionIntent(question).tools.contains(.context), question)

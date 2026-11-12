@@ -1,0 +1,53 @@
+{
+  "scope": "Actual Gemma CPU generation on Mac with synthetic day events; not private calendar data or an iPhone benchmark",
+  "events": [
+    {
+      "title": "Research meeting",
+      "time": "10:00–11:00 UTC"
+    },
+    {
+      "title": "Ballet class",
+      "time": "18:00–19:00 UTC"
+    }
+  ],
+  "result": {
+    "allowedTools": [
+      "context"
+    ],
+    "availability": "available",
+    "decision": {
+      "noData": {}
+    },
+    "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v7; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+    "id": "C93089C3-49D5-4411-9F9F-D53CB9AA9492",
+    "latencyMilliseconds": 2920.321417,
+    "mode": "Gemma 4 E2B · Validated",
+    "prompts": {
+      "explanation": "joe.explanation.v2",
+      "persona": "joe.persona.v3",
+      "safety": "joe.safety.v2"
+    },
+    "question": "What's on my calendar today?",
+    "regressionCaseID": "en-calendar-day",
+    "response": "You have a research meeting from 10:00–11:00 and a ballet class from 18:00–19:00 today.",
+    "safetyPolicy": {
+      "cgmStaleSeconds": 900,
+      "contextStaleSeconds": 900,
+      "highGlucose": 250,
+      "lowGlucose": 70,
+      "pumpStaleSeconds": 21600
+    },
+    "safetyPolicyVersion": "joe.safety-policy.v1",
+    "timestamp": "2026-11-12T02:05:08Z",
+    "usedTools": [
+      "context"
+    ],
+    "validationReasons": [],
+    "validatorVersion": "joe.response-validator.v5"
+  },
+  "notes": [
+    "Event titles and local formatted times were supplied in the context tool.",
+    "The final validator also retains the general safety checks after calendar-specific checks.",
+    "Heuristic validation cannot prove that every generated statement is correct."
+  ]
+}

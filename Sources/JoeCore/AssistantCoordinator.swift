@@ -57,7 +57,8 @@ public struct AssistantTurnRecord: Codable, Sendable, Identifiable {
     public func answer(_ question: String, snapshot: AssistantSnapshot, history: [JoeChatTurn], regressionCaseID: String? = nil) async -> AssistantTurnRecord {
         let start = ContinuousClock.now
         var decision = SafetyDecisionEngine(policy: snapshot.policy).evaluate(cgm: snapshot.currentGlucose, forecast: snapshot.forecastResult)
-        let allowed = QuestionIntent(question).tools
+        let intent = QuestionIntent(question)
+        let allowed = intent.tools
         let availability = provider.availability(language: ReplyLanguage(text: question))
         var failure: AssistantFailure?; var reasons: [String] = []; var used: Set<ToolKind> = []
         var mode = "Swift deterministic fallback"

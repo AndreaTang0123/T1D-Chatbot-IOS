@@ -30,6 +30,9 @@ public struct RecentInsulinResult: Codable, Sendable {
     public let coverage: String
 }
 public struct CurrentContextResult: Codable, Sendable {
+    public let calendarDay: CalendarDayResult?
+    public let calendarDisplay: String?
+    public let access: [String: String]
     public let freshness: DataStatus
     public let timestamp: Date?
     public let stepsLast30m: Double?
@@ -42,6 +45,8 @@ public struct CurrentContextResult: Codable, Sendable {
     public let minutesUntilNextEvent: Int?
 }
 public struct AssistantSnapshot: Sendable {
+    public let calendarDay: CalendarDayResult?
+    public let contextAccess: [String: String]
     public let glucoseHistory: GlucoseHistorySummary?
     public let glucose: GlucoseSample?
     public let forecast: Forecast?
@@ -54,7 +59,9 @@ public struct AssistantSnapshot: Sendable {
     public let currentEventEnd: Date?
     public init(glucose: GlucoseSample?, forecast: Forecast?, treatments: [Treatment], context: LifestyleContext?,
                 now: Date, policy: SafetyPolicy = SafetyPolicy(), nextEventCategory: String? = nil,
-                nextEventStart: Date? = nil, currentEventEnd: Date? = nil, glucoseHistory: GlucoseHistorySummary? = nil) {
+                nextEventStart: Date? = nil, currentEventEnd: Date? = nil, glucoseHistory: GlucoseHistorySummary? = nil, contextAccess: [String: String] = [:], calendarDay: CalendarDayResult? = nil) {
+        self.calendarDay = calendarDay
+        self.contextAccess = contextAccess
         self.glucoseHistory = glucoseHistory
         self.glucose = glucose; self.forecast = forecast; self.treatments = treatments; self.context = context
         self.now = now; self.policy = policy; self.nextEventCategory = nextEventCategory
@@ -62,7 +69,7 @@ public struct AssistantSnapshot: Sendable {
     }
     public func rechecked(at time: Date) -> AssistantSnapshot {
         AssistantSnapshot(glucose: glucose, forecast: forecast, treatments: treatments, context: context, now: time,
-            policy: policy, nextEventCategory: nextEventCategory, nextEventStart: nextEventStart, currentEventEnd: currentEventEnd, glucoseHistory: glucoseHistory)
+            policy: policy, nextEventCategory: nextEventCategory, nextEventStart: nextEventStart, currentEventEnd: currentEventEnd, glucoseHistory: glucoseHistory, contextAccess: contextAccess, calendarDay: calendarDay)
     }
     public var currentGlucose: CurrentGlucoseResult {
         guard let g = glucose, g.glucose.isFinite, (40...400).contains(g.glucose), g.timestamp <= now else {
@@ -104,7 +111,7 @@ public struct AssistantSnapshot: Sendable {
         }
         let hasCalendar = c?.calendar != nil && currentEventEnd.map { $0 > now } != false
         let next = c != nil && nextEventStart.map { $0 > now } == true
-        return CurrentContextResult(freshness: c == nil ? .unavailable : .fresh, timestamp: c?.timestamp,
+        return CurrentContextResult(calendarDay: calendarDay, calendarDisplay: calendarDay?.response(language: .english, at: now), access: contextAccess, freshness: c == nil ? .unavailable : .fresh, timestamp: c?.timestamp,
             stepsLast30m: valid(c?.steps, maximum: 100000), heartRate: valid(c?.heartRate, maximum: 250),
             workoutCategory: c?.workoutActive.map { $0 ? "recent_or_active" : "no_recent_visible_workout" },
             sleepHoursLastNight: valid(c?.sleepHours, maximum: 36), placeCategory: c?.place,

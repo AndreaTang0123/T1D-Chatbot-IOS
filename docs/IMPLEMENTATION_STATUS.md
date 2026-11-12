@@ -8,7 +8,7 @@ Implementation began in a standalone repository containing only a README and imp
 | Nightscout | HTTPS GET entries/treatments/profile, token or SHA-1 authentication, initial 48-hour window, six-hour overlap, ID upserts, bounded retries, no redirects; full pages are rejected rather than silently truncated |
 | Keychain / SwiftData | URL and credentials in ThisDeviceOnly Keychain; local health records, context, features, profiles, forecasts, and errors; no CloudKit; export and clearing |
 | HealthKit | Settings-based explicit read authorization for steps, heart rate, workouts, and sleep; step statistics, merged sleep intervals, observers; unavailable data stays missing |
-| Calendar | Settings-based explicit full-access request; current/next event categories; no stored titles, notes, or attendees |
+| Calendar | Settings-based explicit full-access request; current/next event categories plus explicit local day-event title/time lists; requested titles persist in chat/export only; no notes or attendees |
 | Location | Coarse location, optional Always Visits/significant changes/geofences, named places, and categorical visit records; no continuous routes |
 | Features | UTC five-minute buckets, causal CGM grid, separate missingness flags, and Python/Swift fixtures |
 | Forecast | Core ML CPU inference at 30/60 minutes; manifest/input/output validation; stops when model, history, or fresh CGM is unavailable |

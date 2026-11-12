@@ -39,6 +39,17 @@ import JoeCore
             print("LUNCH: \(question)\nREPLY: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
             turns.append(turn)
         }
+        let now = Date()
+        let zone = TimeZone(secondsFromGMT: 0)!
+        var cal = Calendar(identifier: .gregorian); cal.timeZone = zone
+        let interval = cal.dateInterval(of: .day, for: now)!
+        let day = CalendarDayResult(status: .available, dayStart: interval.start, dayEnd: interval.end, timeZone: zone, events: [
+            CalendarDayEvent(title: "Research meeting", start: interval.start.addingTimeInterval(36000), end: interval.start.addingTimeInterval(39600)),
+            CalendarDayEvent(title: "Ballet class", start: interval.start.addingTimeInterval(64800), end: interval.start.addingTimeInterval(68400))])
+        let snapshot = AssistantSnapshot(glucose: nil, forecast: nil, treatments: [], context: nil, now: now, calendarDay: day)
+        let turn = await coordinator.answer("What's on my calendar today?", snapshot: snapshot, history: [], regressionCaseID: "en-calendar-day")
+        print("CALENDAR: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
+        turns.append(turn)
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(turns).write(to: URL(fileURLWithPath: CommandLine.arguments[2]))
         await provider.runtime.unload()

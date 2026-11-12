@@ -349,7 +349,8 @@ struct DataAccessSettingsView: View {
                     }
                     Text("Percentages describe observed 5-minute bins, not clinical time-in-range. Gaps are excluded, not counted as normal. Reads stay on this device; chat summaries enter local conversation logs and explicit research exports.").font(.caption).foregroundStyle(.secondary)
                 }
-                Section("Calendar · Categories only") {
+                Section("Calendar · Local access") {
+                    Text("Context uses event categories. Asking Joe for today’s calendar passes local event titles and times to Gemma on this device. Answers enter recent conversation history, saved chat and research exports. Event notes, attendees and locations are not included.").font(.caption).foregroundStyle(.secondary)
                     Toggle("Collect calendar categories", isOn: Binding(get: { calendarCollection && state.calendar.hasAccess }, set: { enabled in
                         if enabled {
                             requestingCalendar = true
@@ -470,7 +471,7 @@ struct SettingsView: View {
                 Section("Research data · Stored locally") {
                     Button("Prepare research JSON export") { state.export() }.disabled(state.isRefreshing)
                     if let exportURL = state.exportURL { ShareLink("Share export", item: exportURL) }
-                    Text("Exports contain health records, conversations, versioned safety logs, regression results, forecasts and errors. They exclude Nightscout credentials and calendar titles. Choose where to save the file.").font(.caption).foregroundStyle(.secondary)
+                    Text("Exports contain health records, conversations, versioned safety logs, regression results, forecasts and errors. They exclude Nightscout credentials. Requested calendar answers can contain event titles. Choose where to save the file.").font(.caption).foregroundStyle(.secondary)
                     Button("Clear local data and credentials", role: .destructive) { eraseConfirmation = true }.disabled(state.isRefreshing || state.isAnswering || state.isRunningPersonaRegression)
                 }
                 Section("About forecasts") {

@@ -23,7 +23,7 @@ These device tests remain pending. Source checks do not count as successful devi
 ## Permissions and privacy
 
 - [ ] Test each HealthKit permission granted, denied, partially available, and revoked in Settings; empty results remain missing.
-- [ ] Calendar denial/revocation does not crash the app; storage and exports contain no titles, attendees, or notes.
+- [ ] Calendar denial/revocation does not crash the app; lifestyle records contain categories only. Explicit day-query titles can appear in chat/export; notes and attendees remain excluded.
 - [ ] Handle When In Use, Always, denied, and Approximate location access.
 - [ ] Named-place creation/deletion, Visits, and geofence entry/exit work without continuous high-accuracy location tracking.
 - [ ] Clearing removes local records, credentials, named places, visit records, and the current temporary export, and disables collection.
@@ -89,3 +89,10 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Health/calendar switches cannot be changed while their authorization request is pending. Changes remain visible after reopening Settings.
 - [ ] Turning collection off stops the relevant observers/monitoring without deleting records or claiming to revoke iOS permission. Turning background location off stops Visits, significant changes and region monitoring while retaining foreground collection.
 - [ ] When Always location permission is already granted, background collection still requires its own enabled switch; saving a named place does not restart disabled monitoring.
+
+## Explicit today-calendar lists
+
+- [ ] Ask “What is on my calendar today?” / “今天日历有什么安排？”; compare the title/time list with iPhone Calendar. Verify earlier-today, all-day, overnight and recurring occurrences, local midnight/DST boundaries, and canceled-event exclusion.
+- [ ] With Gemma unloaded and no CGM, the local fallback list still works; with Gemma loaded, verify the event list actually enters the context tool and a screened model response is displayed.
+- [ ] Disabled collection, missing full authorization, unavailable query and empty local results have distinct messages. EventKit's synchronous event query has no error callback: empty local results cannot establish remote account sync completeness.
+- [ ] Requested titles appear in saved chat and explicit exports, and in the requested local-model context/recent replay, but not lifestyle/forecast records. Review UI privacy text and clearing behavior.

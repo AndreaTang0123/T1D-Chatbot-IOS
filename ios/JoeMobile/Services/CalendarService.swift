@@ -17,6 +17,24 @@ import JoeCore
         UserDefaults.standard.set(allowed, forKey: "calendarEnabled")
         return allowed
     }
+    func daySchedule(at now: Date) -> CalendarDayResult {
+        let calendar = Calendar.current
+        guard let day = calendar.dateInterval(of: .day, for: now) else {
+            return CalendarDayResult(status: .failed, dayStart: now, dayEnd: now, timeZone: calendar.timeZone)
+        }
+        func result(_ status: CalendarDayResult.Status, _ events: [CalendarDayEvent] = []) -> CalendarDayResult {
+            CalendarDayResult(status: status, dayStart: day.start, dayEnd: day.end, timeZone: calendar.timeZone, events: events)
+        }
+        guard enabled else { return result(.collectionDisabled) }
+        guard hasAccess else { return result(.notAuthorized) }
+        let predicate = store.predicateForEvents(withStart: day.start, end: day.end, calendars: nil)
+        // EventKit's synchronous query has no error callback. Empty means no visible local events, not proof of server coverage.
+        let events = store.events(matching: predicate).filter { $0.status != .canceled }.map {
+            CalendarDayEvent(title: $0.title ?? "", start: $0.startDate, end: $0.endDate, allDay: $0.isAllDay)
+        }
+        guard hasAccess else { return result(.notAuthorized) }
+        return result(.available, events)
+    }
     func snapshot(at now: Date) -> Snapshot {
         guard enabled, EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return Snapshot() }
         let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-3600), end: now.addingTimeInterval(6*3600), calendars: nil)
