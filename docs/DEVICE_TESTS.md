@@ -113,3 +113,12 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Memory warnings cancel model work and release the engine. Next eligible chat automatically reloads. Test on iPhone 15 Pro for actual memory pressure, latency and thermals.
 - [ ] Manual unload followed by a new message reloads automatically; removing weights requires an explicit new download/import. Load errors show status and do not retry continuously.
 - [ ] Persona regression automatically loads and retains one engine for the run, and cancels on background entry.
+
+## Time evidence and rolling three-day history
+
+- [ ] Ask when the last bolus occurred. Verify the actual source timestamp displayed in local date/time/timezone, including UTC offset, with no “minutes ago” wording. A stale visible record is not described as complete pump coverage.
+- [ ] Generate across a minute boundary: original facts remain valid. Separately cross a CGM/context/calendar freshness boundary and confirm an appropriate safety/expiry response, not `unsupported_number`.
+- [ ] Verify DST repeated-hour timestamps, midnight and device-timezone changes. Incorrect times and fabricated insulin amounts still fail screening.
+- [ ] Ask “最近三天血糖” / “past 3 days glucose”. Compare window bounds, coverage, extrema and observed daily means with the source. Overlapping Health/Nightscout bins count once and prefer direct Nightscout.
+- [ ] Disable a source or interrupt sync: missing data remains missing, source errors are visible, and cached/partial history is not called current CGM or complete coverage. Do not interpret bin percentages as clinical time-in-range.
+- [ ] Update an existing installation in place; old conversation records decode with absent new fact/freshness log fields.

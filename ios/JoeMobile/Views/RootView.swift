@@ -342,12 +342,12 @@ struct DataAccessSettingsView: View {
                     LabeledContent("Most recent sleep", value: state.context?.sleepHours.map { String(format: "%.1f hours", $0) } ?? "Missing")
                     Text("Empty results may indicate no data, partial access, or denied access. iOS does not disclose which read permissions were denied.").font(.caption).foregroundStyle(.secondary)
                 }
-                Section("Apple Health · Historical glucose") {
-                    Text("In Dexcom, enable Apple Health blood glucose sharing, then allow Joe to read it above. Dexcom sharing can be about 3 hours delayed; older Clarity history may not be backfilled. This does not supply current glucose or forecasts.").font(.caption)
+                Section("Historical glucose · Local sources") {
+                    Text("Three-day queries combine visible Nightscout and Apple Health records. For Apple Health, enable Dexcom blood glucose sharing and allow Joe to read it above; sharing may be about 3 hours delayed and older Clarity history may not be backfilled. Apple Health history is not current CGM or a forecasting input.").font(.caption)
                     Picker("History window", selection: $state.historyDays) {
-                        Text("7 days").tag(7); Text("14 days").tag(14); Text("30 days").tag(30)
+                        Text("3 days / 72 hours").tag(3); Text("7 days").tag(7); Text("14 days").tag(14); Text("30 days").tag(30)
                     }
-                    Button("Refresh glucose history") { Task { await state.refreshHealthHistory() } }
+                    Button("Refresh glucose history") { Task { await state.refreshHealthHistory(); if state.historyDays == 3 { await state.refreshThreeDayHistory() } } }
                     Text(state.healthHistoryStatus).font(.caption)
                     if let summary = state.historySummary {
                         Text(summary.description(language: .english)).font(.footnote)

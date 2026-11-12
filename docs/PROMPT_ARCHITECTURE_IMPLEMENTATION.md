@@ -9,7 +9,7 @@ This implements the sibling browser repository's `IOS_JOE_PROMPT_AND_MODEL_ARCHI
 | Safety decision | `SafetyDecisionEngine` evaluates unavailable → stale → low → high → configured forecast risk → normal using `SafetyPolicy` |
 | Before-model fallback | No CGM, stale current-glucose questions, current low/high, forecast risk, and dose requests use deterministic responses; no generation is requested |
 | Availability/errors | Missing or unloaded Gemma assets, tool preparation failures, cancellation and generic native generation failures trigger fallback; legacy availability/error codes remain decodable |
-| Structured tools | Four typed `Codable` result structs are serialized as nested JSON objects; output includes freshness, null/absent values, source times, and applicable model/schema metadata |
+| Structured tools | Four typed `Codable` result structs are serialized as nested JSON objects; output includes freshness, null/absent values, absolute local source times, and applicable model/schema metadata |
 | Tool selection | Intent-based English/Mandarin routing executes only relevant local tools before generation; conversational sharing does not open every tool |
 | Tool evidence | A per-turn ledger tracks actual Swift tool-result serializations, not merely allowed tools. Generated data claims must be supported by tools actually used |
 | Coordinator | `AssistantCoordinator` owns deterministic gating, availability checks, one generation attempt, response screening and immediate fallback. Rejected responses are never sent for model self-repair |
@@ -23,9 +23,9 @@ This implements the sibling browser repository's `IOS_JOE_PROMPT_AND_MODEL_ARCHI
 - `CurrentGlucoseResult`: status, glucose, direction, age and source timestamp. Future or invalid readings are unavailable; stale readings retain historical semantics.
 - `ForecastToolResult`: availability, source/generation times, predictions, validation uncertainty, data-quality flags, model and feature-schema versions. Risk is absent unless both a supplied score and explicit calibrated-risk policy are available.
 - `RecentInsulinResult`: latest visible bolus, age/freshness, an active visible absolute temp basal if available, and explicit incomplete coverage. IOB remains unavailable.
-- `CurrentContextResult`: semantic activity/sleep/place/calendar categories, heart rate, next-event category/minutes, and freshness. No raw coordinates, titles, notes or participants are exposed.
+- `CurrentContextResult`: semantic activity/sleep/place/calendar categories, heart rate, next-event category/local time, and freshness. No raw coordinates, titles, notes or participants are exposed.
 
-Tools use a consistent local snapshot for the turn and recheck time-based validity when called. The coordinator checks freshness again after generation before displaying the response. Tools do not contact Nightscout or command a pump.
+Tools use a consistent local snapshot for the turn and recheck time-based validity when called. The provider returns its executed fact snapshot; validation uses that immutable evidence. A separate ReplyFreshnessReview rechecks expiry after generation before display. Tools do not contact Nightscout or command a pump.
 
 ## Logs and versions
 
@@ -69,3 +69,13 @@ Calendar payloads now carry a bounded output-token budget based on the app-rende
 ## Six-event today reproduction
 
 The device diagnostics identified `calendar_event_omitted` and `calendar_time_omitted`: EventKit had returned data, but the generated reply did not preserve the complete list. The complete-list per-turn hint previously excluded the today scope. Adapter v10 now applies it to every explicit calendar range and includes the canonical rows directly; persona v4 explicitly exempts calendar lists from ordinary brevity. The [synthetic six-event reproduction](reports/calendar-six-events-model-smoke.v1.json) uses two all-day and four timed/overlapping events and passes actual local Gemma generation plus unchanged calendar screening. The weekly scenario also passes. This is a Mac integration check; verify real phone replies after updating.
+
+## Fact validation versus freshness
+
+`ModelReply.factSnapshot` carries the exact source snapshot used by the adapter, including its timezone. `ResponseValidator` checks the generated reply against this snapshot; `ReplyFreshnessReview` separately evaluates CGM, forecasts, context and calendar validity at reply time. The latter may replace a correct but no-longer-current reply without calling its original numbers unsupported. Logs add optional `factSnapshotTime`, `freshnessCheckTime` and `freshnessReasons`, retaining decode compatibility with old JSON records.
+
+Swift supplies absolute local timestamps with UTC offsets, including repeated-hour DST disambiguation. Age fields and raw CGM/bolus UTC timestamps are omitted from the model-facing projection, while internal ages remain available for safety. The validator masks only complete source-backed timestamp tokens before checking other numbers, rejects changed/unrecognized times and elapsed-time wording, and independently checks insulin amounts with tight precision. It does not broadly whitelist clock/calendar digits as possible doses. Forecast targets and next-event times are supplied as absolute local times.
+
+The new 72-hour history query supplements the existing 7/14/30-day Apple Health history path with an explicit bounded Nightscout entries refresh. Five-minute bins prefer direct Nightscout values over delayed duplicates. Only aggregate/daily summaries enter the local model, not thousands of raw readings. Partial source coverage and partial local days remain explicit; summary extrema/time refer to selected observed bins, not continuous clinical monitoring. Native smoke uses synthetic data only and may log synthetic raw replies for diagnosis; production still does not retain rejected raw replies.
+
+Reply presentation uses the phone's timezone and the reply-time local calendar day: today's and yesterday's verified timestamps become “today HH:mm” / “yesterday HH:mm” (or 今天 / 昨天 for Chinese). Older dates retain yyyy-MM-dd HH:mm. Timezone annotations stay in internal fact evidence for validation but are omitted from displayed and spoken replies. This formatting also applies to fallback replies after their facts are selected; event-title parentheses are preserved.

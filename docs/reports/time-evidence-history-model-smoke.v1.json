@@ -1,0 +1,93 @@
+{
+  "scope": "Actual Gemma CPU generation using synthetic bolus and 72-hour glucose data on Mac; not private device data or clinical validation",
+  "modelCases": [
+    {
+      "allowedTools": [
+        "forecast",
+        "glucose",
+        "insulin"
+      ],
+      "availability": "available",
+      "decision": {
+        "normal": {}
+      },
+      "factSnapshotTime": "2026-11-12T16:46:48Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v11; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-12T16:46:55Z",
+      "freshnessReasons": [],
+      "id": "1BEF7E40-D419-4DF0-886E-AF95FEC717E1",
+      "latencyMilliseconds": 7161.064667,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v3",
+        "persona": "joe.persona.v4",
+        "safety": "joe.safety.v2"
+      },
+      "question": "When did I last bolus?",
+      "regressionCaseID": "bolus-local-event-time",
+      "response": "Your last visible bolus was at 2026-11-11 21:21 (America/New_York, UTC-05:00).",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "sourceCGMTimestamp": "2026-11-12T16:46:48Z",
+      "timestamp": "2026-11-12T16:46:48Z",
+      "usedTools": [
+        "forecast",
+        "glucose",
+        "insulin"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v7"
+    },
+    {
+      "allowedTools": [
+        "history"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-12T16:46:48Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v11; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-12T16:46:58Z",
+      "freshnessReasons": [],
+      "id": "9D8E7272-D7E7-4BB3-BBAA-121200B489C4",
+      "latencyMilliseconds": 9756.6205,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v3",
+        "persona": "joe.persona.v4",
+        "safety": "joe.safety.v2"
+      },
+      "question": "Summarize my glucose over the past 3 days and the observed daily means.",
+      "regressionCaseID": "rolling-72-hour-history",
+      "response": "Historical glucose observations (may be delayed/incomplete):\nMean for the past 3 days is 115 mg/dL.\nThe daily observations are as follows:\n2026-11-09: mean 115 mg/dL, minimum 100 mg/dL, maximum 130 mg/dL, observed bins 12\n2026-11-10: mean 115 mg/dL, minimum 100 mg/dL, maximum 130 mg/dL, observed bins 24\n2026-11-11: mean 115 mg/dL, minimum 100 mg/dL, maximum 130 mg/dL, observed bins 24\n2026-11-12: mean 115 mg/dL, minimum 100 mg/dL, maximum 130 mg/dL, observed bins 12",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-12T16:46:48Z",
+      "usedTools": [
+        "history"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v7"
+    }
+  ],
+  "coreXCTestCount": 86,
+  "notes": [
+    "Bolus reply uses an absolute local timestamp with UTC offset.",
+    "Rolling history reports observed source coverage and daily local-date statistics; partial local days are possible.",
+    "Fact-snapshot and post-generation freshness paths have separate unit regressions.",
+    "Rejected raw production replies remain unretained; diagnostic raw logging in the smoke harness is synthetic-only."
+  ]
+}

@@ -53,7 +53,7 @@ public enum NightscoutDecoder {
             let t = Date(timeIntervalSince1970: ms/1000)
             guard t <= receivedAt else { return nil }
             return GlucoseSample(id: row["_id"] as? String ?? "cgm-\(ms)", timestamp: t, glucose: value,
-                                 direction: row["direction"] as? String, receivedAt: receivedAt)
+                                 direction: row["direction"] as? String, receivedAt: receivedAt, sourceName: "Nightscout")
         }.sorted { $0.timestamp < $1.timestamp }
     }
     public static func treatments(_ data: Data, receivedAt: Date) throws -> [Treatment] {

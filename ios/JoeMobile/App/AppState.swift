@@ -27,9 +27,13 @@ struct ChatMessage: Identifiable {
     private let nightscout = NightscoutClient()
     private let forecaster = ForecastService()
     var healthGlucoseHistory: [GlucoseSample] = []
-    var healthHistoryStatus = "Enable HealthKit access to read historical glucose."
+    var healthHistoryStatus = "Historical glucose uses available Nightscout and authorized Apple Health records."
     var historyDays = 14
-    var historySummary: GlucoseHistorySummary? { GlucoseHistorySummary(samples: healthGlucoseHistory, days: historyDays, now: Date()) }
+    var historySamples: [GlucoseSample] {
+        healthGlucoseHistory + glucose.map { g in GlucoseSample(id: g.id, timestamp: g.timestamp, glucose: g.glucose, direction: g.direction,
+            receivedAt: g.receivedAt, sourceName: g.sourceName ?? "Nightscout") }
+    }
+    var historySummary: GlucoseHistorySummary? { GlucoseHistorySummary(samples: historySamples, days: historyDays, now: Date()) }
     var glucose: [GlucoseSample] = []
     var treatments: [Treatment] = []
     var context: LifestyleContext?
@@ -110,8 +114,8 @@ struct ChatMessage: Identifiable {
         var now = Date()
         do {
             if let credentials = try KeychainStore.load() {
-                // Re-fetch overlap for delayed treatment uploads; bounded 48h startup window.
-                let since = max(glucose.last?.timestamp.addingTimeInterval(-6*3600) ?? now.addingTimeInterval(-48*3600), now.addingTimeInterval(-48*3600))
+                // Re-fetch overlap for delayed treatment uploads; bounded 72h startup window.
+                let since = max(glucose.last?.timestamp.addingTimeInterval(-6*3600) ?? now.addingTimeInterval(-72*3600), now.addingTimeInterval(-72*3600))
                 let result = try await nightscout.sync(credentials, since: since, now: now)
                 try Task.checkCancellation()
                 try store.ingest(glucose: result.glucose, treatments: result.treatments, profile: result.profile, at: now)
@@ -152,7 +156,8 @@ struct ChatMessage: Identifiable {
     func refreshHealthHistory() async {
         do {
             let records = try await health.glucoseHistory(at: Date())
-            guard health.enabled, !Task.isCancelled else { healthGlucoseHistory = []; return }
+            guard health.enabled else { healthGlucoseHistory = []; healthHistoryStatus = "Apple Health collection is off. Cached Nightscout history remains available."; return }
+            guard !Task.isCancelled else { return }
             healthGlucoseHistory = records
             healthHistoryStatus = records.isEmpty ? "No visible blood glucose records. Check Dexcom sharing and Joe's read access; iOS does not reveal read denial." : "Apple Health history refreshed. Not a real-time glucose source."
         } catch {
@@ -160,11 +165,27 @@ struct ChatMessage: Identifiable {
             healthHistoryStatus = "Unable to read Apple Health glucose. Unlock iPhone and retry; check Health permissions."
         }
     }
+    func refreshThreeDayHistory() async {
+        let now = Date()
+        do {
+            if let credentials = try KeychainStore.load() {
+                let records = try await nightscout.glucoseHistory(credentials, since: now.addingTimeInterval(-72*3600), now: now)
+                try Task.checkCancellation()
+                try store.ingest(glucose: records, treatments: [], profile: nil, at: now)
+                glucose = try store.glucose()
+                healthHistoryStatus = "Three-day history refreshed. Sources and coverage are reported; gaps remain missing."
+            } else { healthHistoryStatus = "Using visible Apple Health and cached Nightscout history; no live Nightscout connection is configured." }
+        } catch is CancellationError { return }
+        catch {
+            healthHistoryStatus = "Three-day Nightscout refresh failed. Using available cached/Apple Health records; coverage may be incomplete."
+            warnings.append(healthHistoryStatus)
+        }
+    }
     func assistantSnapshot(at now: Date, historyWindow: Int? = nil) -> AssistantSnapshot {
         AssistantSnapshot(glucose: glucose.last, forecast: forecast, treatments: treatments,
             context: currentContext ?? context, now: now, policy: SafetyPolicy(cgmStaleSeconds: staleMinutes*60),
             nextEventCategory: calendarSnapshot.next, nextEventStart: calendarSnapshot.nextStart,
-            currentEventEnd: calendarSnapshot.currentEnd, glucoseHistory: GlucoseHistorySummary(samples: healthGlucoseHistory, days: historyWindow ?? historyDays, now: now),
+            currentEventEnd: calendarSnapshot.currentEnd, glucoseHistory: GlucoseHistorySummary(samples: historySamples, days: historyWindow ?? historyDays, now: now),
             contextAccess: ["calendar": !calendar.enabled ? "collection_disabled" : calendar.hasAccess ? "authorized" : "not_authorized",
                             "location": !location.collectionEnabled ? "collection_disabled" : location.hasAccess ? "authorized" : "not_authorized"], calendarDay: calendarDay)
     }
@@ -181,7 +202,10 @@ struct ChatMessage: Identifiable {
         isAnswering = true; defer { isAnswering = false }
         let intent = QuestionIntent(question)
         calendarDay = intent.calendar && !intent.sharingExperience ? calendar.daySchedule(at: Date(), question: question) : nil
-        if intent.history { await refreshHealthHistory() }
+        if intent.history {
+            await refreshHealthHistory()
+            if GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays) == 3 { await refreshThreeDayHistory() }
+        }
         if intent.context && !intent.sharingExperience {
             // Refresh local permission-gated sources independently of Nightscout synchronization.
             location.refresh()

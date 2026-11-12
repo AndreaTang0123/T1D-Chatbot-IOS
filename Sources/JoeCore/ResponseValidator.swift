@@ -6,7 +6,7 @@ public struct ResponseValidation: Codable, Sendable, Equatable {
 }
 /// Conservative regression-tested screening, not a proof of clinical correctness.
 public struct ResponseValidator: Sendable {
-    public static let version = "joe.response-validator.v6"
+    public static let version = "joe.response-validator.v7"
     public init() {}
     public func validate(_ text: String, userText: String, decision: SafetyDecision,
                          snapshot: AssistantSnapshot, evidence: Set<ToolKind>) -> ResponseValidation {
@@ -19,7 +19,7 @@ public struct ResponseValidator: Sendable {
         if ReplyLanguage(text: text) != language { reasons.append("language_mismatch") }
         let endings = (try? NSRegularExpression(pattern: "[.!?。！？]+(?:\\s|$)").numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))) ?? 0
         let dayQuery = intent.calendar && !intent.glucose && !intent.forecast && !intent.insulin && !intent.dose && snapshot.calendarDay != nil
-        if !dayQuery && (endings > 2 || text.count > (language == .chinese ? 260 : 650)) { reasons.append("not_brief") }
+        if !dayQuery && !evidence.contains(.history) && (endings > 2 || text.count > (language == .chinese ? 260 : 650)) { reasons.append("not_brief") }
         if text.contains("**") || text.contains("```") || text.unicodeScalars.contains(where: { $0.properties.isEmojiPresentation }) { reasons.append("format_mismatch") }
         if matches("\\b(take|inject|give|administer|increase|decrease|adjust|set|deliver|use|add|reduce|consider|try)\\b.{0,55}\\b(insulin|units?|bolus|basal|pump|u)\\b") ||
             matches("(\u{5efa}\u{8bae}|\u{5e94}\u{8be5}|\u{9700}\u{8981}|\u{53ef}\u{4ee5}|\u{8bf7}|\u{8bd5}\u{8bd5}).{0,20}(\u{6ce8}\u{5c04}|\u{6253}|\u{589e}\u{52a0}|\u{51cf}\u{5c11}|\u{8c03}\u{6574}|\u{80f0}\u{5c9b}\u{7d20}|\u{57fa}\u{7840}\u{7387}|\u{6cf5})") ||
@@ -101,7 +101,29 @@ public struct ResponseValidator: Sendable {
             if has(["falling", "dropping"]) && !direction.hasPrefix("Falling") { reasons.append("unsupported_trend") }
             if has(["steady", "stable"]) && direction != "Steady" { reasons.append("unsupported_trend") }
         }
-        let numbers = Self.numbers(text)
+        // Strip only complete, source-backed timestamp tokens before validating other numbers.
+        // Date/time digits must never authorize a fabricated dose with the same digits.
+        var timestampTokens: [String] = []
+        if evidence.contains(.glucose) { timestampTokens += [cgm.sourceLocalTime].compactMap { $0 } }
+        if evidence.contains(.insulin) { timestampTokens += [snapshot.recentInsulin.latestBolusLocalTime].compactMap { $0 } }
+        if evidence.contains(.forecast) { timestampTokens += [forecast.sourceLocalTime, forecast.generatedLocalTime, forecast.prediction30mLocalTime, forecast.prediction60mLocalTime].compactMap { $0 } }
+        if evidence.contains(.context) { timestampTokens += [snapshot.currentContext.observedLocalTime, snapshot.currentContext.nextEventLocalTime].compactMap { $0 } }
+        if evidence.contains(.history), let h = snapshot.glucoseHistory { timestampTokens += [h.windowStartLocal, h.windowEndLocal, h.latestLocalTime, h.minimumLocalTime, h.maximumLocalTime] + h.daily.map(\.localDate) }
+        var numericText = lower
+        for token in timestampTokens.sorted(by: { $0.count > $1.count }) { numericText = numericText.replacingOccurrences(of: token.lowercased(), with: " ") }
+        if !dayQuery && numericText.range(of: #"\b\d+:\d+(?::\d+)?\b|\b\d{4}-\d{2}-\d{2}\b"#, options: .regularExpression) != nil { reasons.append("unsupported_event_time") }
+        if has(["minutes ago", "minute ago", "hours ago", "hour ago", "days ago", "day ago", "分钟前", "小时前", "天前"]) || matches(#"\b\d+\s*(?:minutes?|hours?|days?)\s+ago\b|\bin\s+\d+\s+(?:minutes?|hours?)\b|[0-9一二三四五六七八九十]+(?:分钟|小时|天)[前后]"#) { reasons.append("relative_event_time") }
+        let asksWhen = ["when", "what time", "什么时候", "几点", "何时"].contains(where: userText.lowercased().contains)
+        if asksWhen, evidence.contains(.insulin), let time = snapshot.recentInsulin.latestBolusLocalTime, !lower.contains(time.lowercased()) { reasons.append("event_time_omitted") }
+        if asksWhen, evidence.contains(.glucose), !evidence.contains(.forecast), !evidence.contains(.insulin), let time = cgm.sourceLocalTime, !lower.contains(time.lowercased()) { reasons.append("event_time_omitted") }
+        let doseRegex = try! NSRegularExpression(pattern: #"([0-9]+(?:\.[0-9]+)?)\s*(?:u\b|units?\b|单位)"#)
+        if !evidence.contains(.insulin) && doseRegex.firstMatch(in: numericText, range: NSRange(numericText.startIndex..., in: numericText)) != nil { reasons.append("insulin_without_tool") }
+        if evidence.contains(.insulin) {
+            let supportedDoses = [snapshot.recentInsulin.latestBolusUnits, snapshot.recentInsulin.basalRate].compactMap { $0 }
+            let doses = doseRegex.matches(in: numericText, range: NSRange(numericText.startIndex..., in: numericText)).compactMap { Range($0.range(at: 1), in: numericText).flatMap { Double(numericText[$0]) } }
+            if doses.contains(where: { n in !supportedDoses.contains(where: { abs(n-$0) < 0.000000001 }) }) { reasons.append("unsupported_insulin_amount") }
+        }
+        let numbers = Self.numbers(dayQuery ? text : numericText)
         var supported: [Double] = []
         if dayQuery, evidence.contains(.context), let day = snapshot.calendarDay {
             supported += Self.numbers(day.response(language: language, at: snapshot.now))

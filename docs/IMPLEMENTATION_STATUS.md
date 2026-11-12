@@ -5,7 +5,7 @@ Implementation began in a standalone repository containing only a README and imp
 | Module | Implemented source functionality |
 |---|---|
 | Native app | SwiftUI Joe (default chat), Overview, Lifestyle, and Settings tabs; Xcode project and shared scheme; minimum iOS 26 |
-| Nightscout | HTTPS GET entries/treatments/profile, token or SHA-1 authentication, initial 48-hour window, six-hour overlap, ID upserts, bounded retries, no redirects; full pages are rejected rather than silently truncated |
+| Nightscout | HTTPS GET entries/treatments/profile, token or SHA-1 authentication, initial 72-hour window, six-hour overlap, ID upserts, bounded retries, no redirects; full pages are rejected rather than silently truncated |
 | Keychain / SwiftData | URL and credentials in ThisDeviceOnly Keychain; local health records, context, features, profiles, forecasts, and errors; no CloudKit; export and clearing |
 | HealthKit | Settings-based explicit read authorization for steps, heart rate, workouts, and sleep; step statistics, merged sleep intervals, observers; unavailable data stays missing |
 | Calendar | Settings-based explicit full-access request; current/next event categories plus explicit local day-event title/time lists; requested titles persist in chat/export only; no notes or attendees |
@@ -46,7 +46,7 @@ Joe is the default tab and displays a session conversation with a bottom text/vo
 
 ## Safety/prompt architecture plan
 
-The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/on-demand automatic Gemma loading, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 74 XCTest checks pass; a ten-case Mac Gemma run produced nine screened replies and one rejection fallback; iPhone generation and manual persona review remain pending. The committed regression report is explicitly a deterministic/fake-provider run.
+The new [architecture implementation](PROMPT_ARCHITECTURE_IMPLEMENTATION.md) maps the sibling prompt/model plan to code. Safety decisions, deterministic gating, structured tools, actual tool-call evidence, response screening, split/versioned prompts, distinct availability/errors, short session memory/on-demand automatic Gemma loading, persistent versioned dialogue logs, and ten bilingual persona fixtures are implemented. All 86 XCTest checks pass; a ten-case Mac Gemma run produced nine screened replies and one rejection fallback; iPhone generation and manual persona review remain pending. The committed regression report is explicitly a deterministic/fake-provider run.
 
 ## Remaining work
 
@@ -89,3 +89,7 @@ See [Gemma setup](GEMMA_SETUP.md). The dependency and model revision/hash are pi
 ## Automatic Gemma lifecycle
 
 Eligible chat requests and synthetic regression wait for installed-file verification and a shared automatic load; launch alone does not initialize weights. Active-use leases protect generation from idle release. Foreground idle is 5 minutes; background idle is 2 minutes, with foreground elapsed-time recheck because iOS may suspend timers. Background entry cancels active generation/initialization but retains an already-ready idle engine for brief switches. Memory warnings release it. The next eligible request reloads automatically; failed loads do not loop. Manual load/unload remain available. Native Mac load/generate/idle-release/reload verification passes; actual iPhone suspension/memory-pressure behavior remains an acceptance check.
+
+## Time evidence and 72-hour history
+
+Facts are validated against the provider's executed immutable snapshot; post-generation safety/freshness has a separate gate and log reasons. Absolute event timestamps include the device timezone and UTC offset. Minute-boundary, wrong-dose, wrong-time, DST and old-log-decoding regressions pass. Explicit three-day queries refresh Nightscout entries over the last 72 hours, combine visible Health history without duplicate-bin inflation, and expose coverage plus observed local-day summaries. No real credentials or health records were accessed during implementation checks.

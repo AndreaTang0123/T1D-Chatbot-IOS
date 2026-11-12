@@ -126,7 +126,7 @@ actor GemmaRuntime {
             let text = try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
             try Task.checkCancellation()
             guard !text.isEmpty, !text.contains("<|channel>"), !text.contains("<start_of_turn>"), !text.contains("<end_of_turn>"), !text.contains("<|"), !text.contains("<tool_call>") else { throw AssistantFailure.generationError }
-            return ModelReply(text: text, usedTools: payload.usedTools)
+            return ModelReply(text: text, usedTools: payload.usedTools, factSnapshot: current)
         } catch is CancellationError { throw AssistantFailure.cancelled }
         catch let failure as AssistantFailure { throw failure }
         catch { throw AssistantFailure.generationError }

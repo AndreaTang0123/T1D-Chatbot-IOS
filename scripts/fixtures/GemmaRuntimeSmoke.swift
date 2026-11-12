@@ -7,7 +7,9 @@ import JoeCore
     func prewarm() {}
     func respond(to request: AssistantModelRequest) async throws -> ModelReply {
         let payload = try GemmaPromptBuilder.build(request: request)
-        return ModelReply(text: try await runtime.generate(prompt: payload.prompt, maxOutputTokens: payload.maxOutputTokens), usedTools: payload.usedTools)
+        let text = try await runtime.generate(prompt: payload.prompt, maxOutputTokens: payload.maxOutputTokens)
+        if CommandLine.arguments.contains("--time-evidence-only") { print("SYNTHETIC RAW: \(text)") }
+        return ModelReply(text: text, usedTools: payload.usedTools, factSnapshot: request.snapshot)
     }
 }
 @main struct Smoke {
@@ -66,7 +68,8 @@ import JoeCore
         print("Loaded in \(Date().timeIntervalSince(start))s")
         let coordinator = AssistantCoordinator(provider: provider)
         var turns: [AssistantTurnRecord] = []
-        let calendarOnly = CommandLine.arguments.contains("--calendar-only")
+        let timeOnly = CommandLine.arguments.contains("--time-evidence-only")
+        let calendarOnly = CommandLine.arguments.contains("--calendar-only") || timeOnly
         for item in (calendarOnly ? [] : PersonaRegressionCase.all) {
             let now = Date()
             let snapshot = AssistantSnapshot(glucose: GlucoseSample(id: "synthetic", timestamp: now, glucose: 120, direction: "Flat", receivedAt: now), forecast: nil, treatments: [], context: nil, now: now)
@@ -85,6 +88,7 @@ import JoeCore
             print("LUNCH: \(question)\nREPLY: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
             turns.append(turn)
         }
+        if !timeOnly {
         let now = Date()
         let zone = TimeZone(secondsFromGMT: 0)!
         var cal = Calendar(identifier: .gregorian); cal.timeZone = zone
@@ -110,6 +114,21 @@ import JoeCore
         let todayTurn = await coordinator.answer("What's on my calendar today?", snapshot: todaySnapshot, history: [], regressionCaseID: "en-calendar-six-events")
         print("SIX EVENTS: \(todayTurn.response)\nMODE: \(todayTurn.mode)\nREJECT: \(todayTurn.validationReasons)")
         turns.append(todayTurn)
+        }
+        if timeOnly {
+            let now = Date(); let zone = TimeZone(identifier: "America/New_York")!
+            let bolus = Treatment(id: "synthetic-bolus", timestamp: now.addingTimeInterval(-(864*60+59)), kind: "Bolus", insulin: 0.3)
+            let s = AssistantSnapshot(glucose: GlucoseSample(id: "g", timestamp: now, glucose: 120, receivedAt: now), forecast: nil, treatments: [bolus], context: nil, now: now, timeZone: zone)
+            let turn = await coordinator.answer("When did I last bolus?", snapshot: s, history: [JoeChatTurn(role: "user", content: "When did I last bolus?"), JoeChatTurn(role: "assistant", content: "The last visible bolus was 0.3 U, 864 minutes ago; IOB is unavailable.")], regressionCaseID: "bolus-local-event-time")
+            print("BOLUS: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
+            turns.append(turn)
+            let samples = (0..<72).map { i in GlucoseSample(id: "synthetic-\(i)", timestamp: now.addingTimeInterval(-Double(i)*3600), glucose: Double(100 + (i % 4) * 10), receivedAt: now, sourceName: "Nightscout") }
+            let h = GlucoseHistorySummary(samples: samples, days: 3, now: now, timeZone: zone)!
+            let historical = AssistantSnapshot(glucose: nil, forecast: nil, treatments: [], context: nil, now: now, glucoseHistory: h, timeZone: zone)
+            let historyTurn = await coordinator.answer("Summarize my glucose over the past 3 days and the observed daily means.", snapshot: historical, history: [], regressionCaseID: "rolling-72-hour-history")
+            print("HISTORY: \(historyTurn.response)\nMODE: \(historyTurn.mode)\nREJECT: \(historyTurn.validationReasons)")
+            turns.append(historyTurn)
+        }
         let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
         try encoder.encode(turns).write(to: URL(fileURLWithPath: CommandLine.arguments[2]))
         await provider.runtime.unload()

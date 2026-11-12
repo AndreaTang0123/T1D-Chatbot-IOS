@@ -30,7 +30,7 @@ public struct ExplanationFallback: Sendable {
                 ?? (language == .chinese ? "尚未读取所需范围的日历，请重试。" : "The requested calendar range has not been read. Please retry.")
         }
         if intent.tools == [.history] {
-            return snapshot.glucoseHistory?.description(language: language) ?? (language == .chinese ? "没有可读取的 Apple 健康历史血糖；请启用 Dexcom 到 Apple 健康的同步，并授权 Joe 读取血糖。空结果也可能表示未授权或没有记录。" : "No Apple Health glucose history is visible. Enable Dexcom sharing to Apple Health and allow Joe to read blood glucose; empty results can also mean denied access or no records.")
+            return snapshot.glucoseHistory?.description(language: language) ?? (language == .chinese ? "所选时间范围内没有可读取的历史血糖记录。请检查 Nightscout 同步或 Apple 健康的共享及读取权限；空结果不能证明没有血糖变化。" : "No glucose history is visible for the requested range. Check Nightscout sync or Apple Health sharing/read access; empty results do not establish what your glucose was.")
         }
         if intent.emotional { return language == .chinese ? "\u{542c}\u{8d77}\u{6765}\u{4eca}\u{5929}\u{771f}\u{7684}\u{5f88}\u{7d2f}，\u{6211}\u{5728}\u{8fd9}\u{91cc}\u{966a}\u{4f60}。\u{4e00}\u{5929}\u{4e0d}\u{987a}\u{5229}\u{5e76}\u{4e0d}\u{80fd}\u{5b9a}\u{4e49}\u{4f60}。" : "That sounds like a lot to carry; I'm here with you. A difficult day doesn't define you." }
         if intent.sharingExperience { return language == .chinese ? "\u{6211}\u{542c}\u{5230}\u{4e86}，\u{6211}\u{5728}\u{8fd9}\u{91cc}\u{966a}\u{4f60}。" : "Got it; I'm here with you." }
@@ -50,29 +50,31 @@ public struct ExplanationFallback: Sendable {
     private func number(_ value: Double) -> String { value.rounded() == value ? String(Int(value)) : String(format: "%.1f", value) }
     private func glucose(_ snapshot: AssistantSnapshot, language: ReplyLanguage, urgent: Bool = false) -> String {
         let g = snapshot.currentGlucose
-        guard let value = g.glucoseMgDl, let age = g.ageMinutes else {
-            return language == .chinese ? "\u{76ee}\u{524d}\u{6ca1}\u{6709}\u{53ef}\u{7528}\u{7684}\u{8840}\u{7cd6}\u{8bfb}\u{6570}，\u{6211}\u{4e0d}\u{80fd}\u{731c}\u{6d4b}\u{5f53}\u{524d}\u{8840}\u{7cd6}。" : "There is no available glucose reading, so I can't know your current glucose."
+        guard let value = g.glucoseMgDl, let time = g.sourceLocalTime else {
+            return language == .chinese ? "没有可用血糖读数，我不会猜测。" : "No valid glucose reading is available; I won't guess."
         }
         if g.status == .stale {
-            return language == .chinese ? "\u{6700}\u{8fd1}\u{4e00}\u{6b21}\u{8840}\u{7cd6}\u{8bfb}\u{6570}\u{662f}\(number(value)) mg/dL，\u{6765}\u{81ea}\(age)\u{5206}\u{949f}\u{524d}；\u{5b83}\u{5df2}\u{8fc7}\u{671f}，\u{4e0d}\u{80fd}\u{4ee3}\u{8868}\u{5f53}\u{524d}\u{8840}\u{7cd6}。" : "The last reading was \(number(value)) mg/dL, \(age) minutes ago; it is stale and does not represent current glucose."
+            return language == .chinese ? "最近可见血糖为\(number(value)) mg/dL，测量时间为\(time)；这条读数已过期，不能代表当前血糖。" : "The latest visible glucose was \(number(value)) mg/dL at \(time); this reading is stale and does not represent current glucose."
         }
-        let condition = value < snapshot.policy.lowGlucose ? (language == .chinese ? "，\u{6570}\u{503c}\u{504f}\u{4f4e}" : ", which is low") : value > snapshot.policy.highGlucose ? (language == .chinese ? "，\u{6570}\u{503c}\u{504f}\u{9ad8}" : ", which is high") : ""
-        return language == .chinese ? "\u{6700}\u{8fd1}\u{6d4b}\u{91cf}\u{662f}\(number(value)) mg/dL，\u{6765}\u{81ea}\(age)\u{5206}\u{949f}\u{524d}\(urgent ? condition : "")。" : "Your latest measurement is \(number(value)) mg/dL from \(age) minutes ago\(urgent ? condition : "")."
+        let condition = value < snapshot.policy.lowGlucose ? (language == .chinese ? "，数值偏低" : ", which is low") : value > snapshot.policy.highGlucose ? (language == .chinese ? "，数值偏高" : ", which is high") : ""
+        return language == .chinese ? "最近测量血糖为\(number(value)) mg/dL，时间为\(time)\(urgent ? condition : "")。" : "Your latest measurement was \(number(value)) mg/dL at \(time)\(urgent ? condition : "")."
     }
     private func prediction(_ snapshot: AssistantSnapshot, language: ReplyLanguage) -> String {
         let f = snapshot.forecastResult
         guard f.available, let p30 = f.predicted30m, let p60 = f.predicted60m, let u30 = f.uncertainty30m, let u60 = f.uncertainty60m else {
             return language == .chinese ? "\u{5f53}\u{524d}\u{6ca1}\u{6709}\u{53ef}\u{7528}\u{7684}\u{9884}\u{6d4b}，\u{6211}\u{4e0d}\u{4f1a}\u{81ea}\u{884c}\u{4f30}\u{7b97}\u{672a}\u{6765}\u{8840}\u{7cd6}。" : "No forecast is available; I won't estimate future glucose myself."
         }
-        return language == .chinese ? "\u{4ee5}\u{8840}\u{7cd6}\u{6d4b}\u{91cf}\u{65f6}\u{95f4}\u{4e3a}\u{8d77}\u{70b9}，\u{5b9e}\u{9a8c}\u{6027}\u{9884}\u{6d4b}\u{4e3a}30\u{5206}\u{949f}\u{540e}\(number(p30))、60\u{5206}\u{949f}\u{540e}\(number(p60)) mg/dL。\u{9a8c}\u{8bc1}\u{96c6}\u{8bef}\u{5dee}P90\u{5206}\u{522b}\u{4e3a}\(number(u30))\u{548c}\(number(u60)) mg/dL，\u{4e0d}\u{662f}\u{4fdd}\u{8bc1}\u{8303}\u{56f4}。" : "Relative to the CGM timestamp, experimental predictions are \(number(p30)) mg/dL at 30 minutes and \(number(p60)) mg/dL at 60 minutes. Validation error P90 is \(number(u30)) and \(number(u60)) mg/dL respectively, not guaranteed bounds."
+        let first = f.prediction30mLocalTime ?? "unavailable"
+        let second = f.prediction60mLocalTime ?? "unavailable"
+        return language == .chinese ? "实验性预测：\(first) 为\(number(p30))、\(second) 为\(number(p60)) mg/dL；验证误差 P90 分别为\(number(u30))和\(number(u60)) mg/dL，不是保证范围。" : "Experimental predictions: \(number(p30)) mg/dL for \(first) and \(number(p60)) mg/dL for \(second). Validation error P90 is \(number(u30)) and \(number(u60)) mg/dL respectively, not guaranteed bounds."
     }
     private func insulin(_ snapshot: AssistantSnapshot, language: ReplyLanguage) -> String {
         let i = snapshot.recentInsulin
-        guard let units = i.latestBolusUnits, let age = i.dataAgeMinutes else {
-            return language == .chinese ? "\u{53ef}\u{89c1}\u{8bb0}\u{5f55}\u{91cc}\u{6ca1}\u{6709}\u{6700}\u{8fd1}\u{7684}bolus，\u{8fd9}\u{4e0d}\u{4ee3}\u{8868}\u{6ca1}\u{6709}\u{8f93}\u{6ce8}\u{80f0}\u{5c9b}\u{7d20}。" : "No recent bolus is visible in the records; this does not mean no insulin was delivered."
+        guard let units = i.latestBolusUnits, let time = i.latestBolusLocalTime else {
+            return language == .chinese ? "可见记录中没有 bolus；这不代表没有输注胰岛素。" : "No bolus is visible in the records; this does not mean no insulin was delivered."
         }
-        let qualifier = i.status == .stale ? (language == .chinese ? "\u{8fc7}\u{671f}\u{7684}\u{5386}\u{53f2}\u{8bb0}\u{5f55}" : "stale historical record") : (language == .chinese ? "\u{53ef}\u{89c1}\u{8bb0}\u{5f55}" : "visible record")
-        return language == .chinese ? "\(qualifier)\u{4e2d}，\u{6700}\u{8fd1}bolus\u{4e3a}\(number(units)) U，\u{6765}\u{81ea}\(age)\u{5206}\u{949f}\u{524d}；IOB\u{4e0d}\u{53ef}\u{7528}。" : "In the \(qualifier), the latest bolus was \(number(units)) U, \(age) minutes ago; IOB is unavailable."
+        let qualifier = i.status == .stale ? (language == .chinese ? "历史可见记录" : "stale historical visible record") : (language == .chinese ? "可见记录" : "visible record")
+        return language == .chinese ? "\(qualifier)中，最近 bolus 为\(number(units)) U，发生于\(time)；IOB 不可用，后续 bolus 可能未同步。" : "In the \(qualifier), the latest bolus was \(number(units)) U at \(time); IOB is unavailable and later boluses may be missing."
     }
     private func context(_ snapshot: AssistantSnapshot, language: ReplyLanguage) -> String {
         let c = snapshot.currentContext
@@ -82,7 +84,7 @@ public struct ExplanationFallback: Sendable {
         if let steps = c.stepsLast30m { parts.append(language == .chinese ? "\u{8fd1}30\u{5206}\u{949f}\u{6b65}\u{6570}\u{4e3a}\(number(steps))" : "steps in the last 30 minutes: \(number(steps))") }
         if let sleep = c.sleepHoursLastNight { parts.append(language == .chinese ? "\u{6700}\u{8fd1}\u{7761}\u{7720}\u{4e3a}\(number(sleep))\u{5c0f}\u{65f6}" : "latest sleep: \(number(sleep)) hours") }
         if let category = c.currentEventCategory { parts.append(language == .chinese ? "\u{5f53}\u{524d}\u{65e5}\u{7a0b}\u{7c7b}\u{522b}\u{4e3a}\(category)" : "current event category: \(category)") }
-        if let next = c.minutesUntilNextEvent { parts.append(language == .chinese ? "\u{4e0b}\u{9879}\u{65e5}\u{7a0b}\u{8fd8}\u{6709}\(next)\u{5206}\u{949f}" : "next event in \(next) minutes") }
+        if let next = c.nextEventLocalTime { parts.append(language == .chinese ? "下项日程时间为\(next)" : "next event at \(next)") }
         guard !parts.isEmpty else { return language == .chinese ? "\u{5f53}\u{524d}\u{751f}\u{6d3b}\u{6570}\u{636e}\u{4e0d}\u{5b8c}\u{6574}，\u{6211}\u{4e0d}\u{4f1a}\u{731c}\u{6d4b}\u{7f3a}\u{5931}\u{5185}\u{5bb9}。" : "No current event or place category is available. Empty results do not mean permission was denied." }
         return parts.prefix(3).joined(separator: language == .chinese ? "；" : "; ") + (language == .chinese ? "；\u{8fd9}\u{4e9b}\u{5173}\u{8054}\u{4e0d}\u{8bf4}\u{660e}\u{56e0}\u{679c}。" : "; these associations do not establish causation.")
     }

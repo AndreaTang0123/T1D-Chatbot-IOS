@@ -37,3 +37,7 @@ The console includes UIKit keyboard diagnostics, native mel-filterbank warnings,
 - Improve fallback wording for a historical timestamp question so it gives the absolute visible bolus time and source freshness, without implying complete pump coverage.
 
 Evidence: the temporary diagnostic executable in `/tmp/Joe-bolus-diagnosis` completed successfully; results are in `/tmp/Joe-bolus-diagnosis.log`. This is a controlled core/coordinator reproduction, not a real iPhone or clinical validation.
+
+## Subsequent repair
+
+The following implementation now returns the executed fact snapshot, validates it immutably, and performs freshness/safety as a separate gate. Model-facing bolus/CGM age fields are replaced by preformatted local timestamps; outputs use absolute event times. New regressions prove correct local-time replies survive the 864→865-minute boundary while genuinely stale CGM/context/calendar results still trigger post-generation expiry. This preserves the original diagnosis above as a historical record of the earlier code.

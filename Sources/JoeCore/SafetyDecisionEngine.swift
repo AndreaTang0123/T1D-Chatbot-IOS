@@ -67,7 +67,7 @@ public struct QuestionIntent: Sendable {
         let s = text.lowercased()
         func has(_ words: [String]) -> Bool { words.contains(where: s.contains) }
         calendar = has(["calendar", "schedule", "appointment", "meeting", "next event", "today's events", "日历", "日程", "安排"])
-        history = has(["history", "historical", "past week", "last week", "last 7", "last 14", "last 30", "two weeks", "recent glucose", "血糖表现", "历史血糖", "最近一周", "最近两周", "近两周", "过去一周", "近一个月", "最近血糖", "血糖总结"]) || (has(["glucose", "blood sugar", "cgm", "血糖"]) && has(["recent", "lately", "week", "month", "最近", "近期", "过去", "近7天", "近14天", "近30天"]))
+        history = has(["history", "historical", "past week", "last week", "last 3", "past 3", "last three", "past three", "last 72", "past 72", "last 7", "last 14", "last 30", "two weeks", "recent glucose", "血糖表现", "历史血糖", "最近三天", "近三天", "过去三天", "最近3天", "近3天", "过去3天", "最近72小时", "最近一周", "最近两周", "近两周", "过去一周", "近一个月", "最近血糖", "血糖总结"]) || (has(["glucose", "blood sugar", "cgm", "血糖"]) && has(["recent", "lately", "week", "month", "最近", "近期", "过去", "近7天", "近14天", "近30天"]))
         glucose = has(["glucose", "blood sugar", "cgm", "\u{8840}\u{7cd6}", "\u{4f4e}\u{8840}", "\u{9ad8}\u{8840}"])
         forecast = has(["forecast", "predict", "future trend", "\u{9884}\u{6d4b}", "\u{672a}\u{6765}", "\u{4e00}\u{5c0f}\u{65f6}\u{540e}\u{8840}\u{7cd6}"])
         insulin = has(["insulin", "bolus", "basal", "meal", "after eating", "\u{80f0}\u{5c9b}\u{7d20}", "\u{9910}\u{540e}", "\u{996d}\u{540e}", "\u{78b3}\u{6c34}"])

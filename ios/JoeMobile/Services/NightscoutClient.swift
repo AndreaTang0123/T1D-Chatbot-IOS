@@ -16,6 +16,14 @@ actor NightscoutClient {
         let glucose: [GlucoseSample]; let treatments: [Treatment]; let profile: Data?
         let warnings: [String]
     }
+    func glucoseHistory(_ credentials: NightscoutCredentials, since: Date, now: Date) async throws -> [GlucoseSample] {
+        let data = try await fetch(credentials.request(path: "api/v1/entries.json", query: [
+            .init(name: "count", value: "10000"),
+            .init(name: "find[date][$gte]", value: String(Int(since.timeIntervalSince1970 * 1000))),
+            .init(name: "find[date][$lte]", value: String(Int(now.timeIntervalSince1970 * 1000)))]))
+        guard try count(data) < 10000 else { throw NightscoutError.truncated }
+        return try NightscoutDecoder.glucose(data, receivedAt: now)
+    }
     func sync(_ credentials: NightscoutCredentials, since: Date, now: Date) async throws -> Result {
         // CGM is independent of optional pump/profile failures.
         let g = try await fetch(credentials.request(path: "api/v1/entries.json", query: [
