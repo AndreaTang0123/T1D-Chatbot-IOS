@@ -34,7 +34,7 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] A cold launch selects Joe; tab order is Joe, Overview, Lifestyle, Settings.
 - [ ] Typed messages and Joe responses remain visible across tab changes, with correct bubble alignment and scroll-to-latest behavior; repeated sends do not duplicate messages.
 - [ ] Holding the microphone requests permissions only on demand. Releasing before authorization completes never starts a recording afterward.
-- [ ] Native Gemma audio input in English/Mandarin updates an editable draft after release; no Apple Speech permission is requested. Test insulin units, decimals, dates, silence and background noise; sending uses the reviewed text exactly once.
+- [ ] Native Gemma audio input in English/Mandarin shows a pending user bubble immediately after release, then replaces it with recognized text and answers automatically; no Apple Speech permission is requested. Test insulin units, decimals, dates, silence and background noise; recognition submits the text exactly once without another Send tap.
 - [ ] Denied microphone/speech access and unavailable on-device recognition show actionable messages while typing remains available.
 - [ ] Recording stops on release, interruption, tab change, background entry, or the duration limit. Returning to the app does not restart recording.
 - [ ] Read-aloud works after recording, including Bluetooth/audio-route checks on a real iPhone.
@@ -150,3 +150,13 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Weekly highlights retain actual event dates and explicit range bounds. Omitted events/end times are allowed only in overview mode; swapped dates/start times and assertions that unrecorded time is free remain rejected.
 - [ ] Ask “List all calendar events today” / “列出本周所有日程”: include every event, all-day labels and start/end times, then an optional interpretation.
 - [ ] Voice reads the visible answer normally. Model/check failures show the existing factual fallback and diagnostics, not fabricated interpretation. Old saved replies are not erased or reclassified as new iCloud evidence.
+
+## Automatic voice-message delivery
+
+- [ ] Hold/release a valid recording: exactly one user bubble appears immediately with spinner/ellipsis, then the same bubble becomes recognized text and Joe replies automatically; no second Send tap or duplicate user message.
+- [ ] Repeat the same spoken phrase twice in separate recordings; both create independent messages and responses.
+- [ ] Cancel during model load/recognition, leave Joe, background the app, disconnect Bluetooth or interrupt audio: the pending bubble becomes canceled, no late recognition sends a question, and native work/file cleanup finishes.
+- [ ] Silence, missing model or recognition failure produces an explicit failed bubble and stops loading; no failure placeholder is sent to the model or saved as a completed chat turn.
+- [ ] A short tap below the recording minimum creates no pending bubble. After permission approval following release, hold again to start capture.
+- [ ] Typed text already in the composer is retained separately, never appended to spoken words. Text Send remains available after voice completion/failure/cancellation, subject to the ordinary answer-in-progress guard.
+- [ ] Observe model loading text while unloaded. After successful ASR, release its lifecycle use before answering; automatic read-aloud must not cancel the just-completed ASR turn or start a duplicate answer.

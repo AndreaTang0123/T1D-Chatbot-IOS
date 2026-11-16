@@ -4,11 +4,13 @@ import JoeCore
 
 struct ChatMessage: Identifiable {
     enum Role { case user, joe }
-    let id = UUID()
+    let id: UUID
     let role: Role
-    let text: String
+    var text: String
+    var voiceDelivery: VoiceMessageDelivery? = nil
     let timestamp: Date
-    init(role: Role, text: String, timestamp: Date = Date(), mode: String? = nil, diagnostics: [String] = []) {
+    init(id: UUID = UUID(), role: Role, text: String, timestamp: Date = Date(), mode: String? = nil, diagnostics: [String] = [], voiceDelivery: VoiceMessageDelivery? = nil) {
+        self.id = id; self.voiceDelivery = voiceDelivery
         self.role = role; self.text = text; self.timestamp = timestamp; self.mode = mode; self.diagnostics = diagnostics
     }
     let diagnostics: [String]
@@ -50,6 +52,7 @@ struct ChatMessage: Identifiable {
     var reply = "Hi, I'm Joe. Connect to Nightscout to view measurements and experimental forecasts."
     var messages: [ChatMessage] = [ChatMessage(role: .joe, text: "Hi, I'm Joe. Ask about your glucose, forecasts, or lifestyle context. You can type or hold the microphone to talk. Connect your data sources in Settings.")]
     var assistantMode = "Deterministic on-device explanation"
+    var isProcessingVoice: Bool { messages.contains { $0.voiceDelivery?.isPending == true } }
     var isAnswering = false
     var isRunningPersonaRegression = false
     @ObservationIgnored private var regressionTask: Task<Void, Never>?
@@ -84,6 +87,21 @@ struct ChatMessage: Identifiable {
                     ChatMessage(role: .joe, text: turn.response, timestamp: turn.timestamp, mode: turn.mode, diagnostics: turn.fallbackDetails)] }
             }
         } catch { warnings.append("Conversation history could not be restored.") }
+        voiceInput.onSubmitted = { [weak self] id in
+            guard let self else { return }
+            self.messages.append(ChatMessage(id: id, role: .user, text: "", voiceDelivery: VoiceMessageDelivery(id: id)))
+        }
+        voiceInput.onRecognized = { [weak self] id, text in
+            Task { @MainActor [weak self] in await self?.ask(text, replacingVoiceMessage: id) }
+        }
+        voiceInput.onFailed = { [weak self] id, detail in
+            guard let self, let index = self.messages.firstIndex(where: { $0.id == id }) else { return }
+            self.messages[index].voiceDelivery?.fail(detail)
+        }
+        voiceInput.onCancelled = { [weak self] id in
+            guard let self, let index = self.messages.firstIndex(where: { $0.id == id }) else { return }
+            self.messages[index].voiceDelivery?.cancel()
+        }
         health.onChange = { [weak self] in Task { await self?.refresh() } }; health.observe()
     }
     func reload() throws {
@@ -197,10 +215,18 @@ struct ChatMessage: Identifiable {
     private var healthActivity: HealthActivityResult?
     private var calendarDay: CalendarDayResult?
     var isInBackground = false
-    func ask(_ text: String) async {
+    func ask(_ text: String, replacingVoiceMessage voiceID: UUID? = nil) async {
         guard !isAnswering, !isRunningPersonaRegression, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let question = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        messages.append(ChatMessage(role: .user, text: question))
+        if let voiceID {
+            guard let index = messages.firstIndex(where: { $0.id == voiceID }), messages[index].voiceDelivery?.isPending == true else { return }
+            guard !isInBackground else { messages[index].voiceDelivery?.cancel(); return }
+            guard messages[index].voiceDelivery?.recognize(question) == true else { return }
+            messages[index].text = question
+        } else {
+            guard !isProcessingVoice, !voiceInput.isFinishing, !voiceInput.isRecording, !voiceInput.isPreparing else { return }
+            messages.append(ChatMessage(role: .user, text: question))
+        }
         isAnswering = true; defer { isAnswering = false }
         let intent = QuestionIntent(question)
         calendarDay = intent.calendar && !intent.sharingExperience ? calendar.daySchedule(at: Date(), question: question) : nil
@@ -224,7 +250,7 @@ struct ChatMessage: Identifiable {
         let modelUse = needsModel ? await assistant.prepareForTurn() : false
         defer { if modelUse { assistant.finishTurn() } }
         let snapshot = assistantSnapshot(at: Date(), historyWindow: GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays))
-        let history = messages.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
+        let history = messages.filter { $0.voiceDelivery == nil || $0.voiceDelivery?.recognizedText != nil }.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
         let turn = await coordinator.answer(question, snapshot: snapshot, history: history)
         reply = turn.response; assistantMode = turn.mode
         do { try store.save(assistantTurn: turn) }
@@ -233,12 +259,12 @@ struct ChatMessage: Identifiable {
         if autoSpeak && !isInBackground { voiceInput.cancel(); speech.speak(reply) }
     }
     func startPersonaRegression() {
-        guard !isAnswering, !isRunningPersonaRegression else { return }
+        guard !isAnswering, !isRunningPersonaRegression, !isProcessingVoice else { return }
         regressionTask = Task { await runPersonaRegression() }
     }
     func cancelPersonaRegression() { regressionTask?.cancel() }
     func runPersonaRegression() async {
-        guard !isAnswering, !isRunningPersonaRegression else { return }
+        guard !isAnswering, !isRunningPersonaRegression, !isProcessingVoice else { return }
         isRunningPersonaRegression = true; speech.stop(); voiceInput.cancel()
         defer { isRunningPersonaRegression = false; regressionTask = nil }
         let modelUse = await assistant.prepareForTurn()
@@ -269,7 +295,7 @@ struct ChatMessage: Identifiable {
         } catch { syncError = "Export failed" }
     }
     func erase() {
-        guard !isRefreshing, !isAnswering, !isRunningPersonaRegression else { return }
+        guard !isRefreshing, !isAnswering, !isRunningPersonaRegression, !isProcessingVoice else { return }
         do {
             KeychainStore.removeLegacyConversationCredential(); try KeychainStore.delete(); try store.erase()
             health.disable(); UserDefaults.standard.set(false, forKey: "calendarEnabled"); location.forgetAll(); voiceInput.cancel(); speech.stop()

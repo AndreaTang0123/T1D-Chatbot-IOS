@@ -191,7 +191,6 @@ struct AssistantView: View {
     @Bindable var state: AppState
     @State private var question = ""
     @State private var isHolding = false
-    @State private var voicePrefix = ""
     @FocusState private var inputFocused: Bool
     var body: some View {
         NavigationStack {
@@ -230,10 +229,6 @@ struct AssistantView: View {
             .navigationTitle("Joe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { Button { state.speech.stop() } label: { Image(systemName: state.speech.isSpeaking ? "speaker.wave.2.fill" : "speaker.slash") }.accessibilityLabel("Stop reading aloud") }
-            .onChange(of: state.voiceInput.transcript) { _, text in
-                guard !text.isEmpty else { return }
-                question = voicePrefix.isEmpty ? text : voicePrefix + " " + text
-            }
             .task { state.assistant.prewarm() }
             .onDisappear { state.assistant.releasePrewarm(); isHolding = false; state.voiceInput.cancel(); state.speech.stop() }
         }
@@ -243,7 +238,23 @@ struct AssistantView: View {
         return HStack(alignment: .bottom, spacing: 8) {
             if !fromJoe { Spacer(minLength: 42) }
             VStack(alignment: .leading, spacing: 8) {
-                Text(message.text).textSelection(.enabled).font(.body)
+                if let delivery = message.voiceDelivery {
+                    switch delivery.state {
+                    case .recognizing:
+                        HStack(spacing: 10) {
+                            ProgressView().tint(.white)
+                            Text("…").font(.title2)
+                            Text(state.assistant.isLoading ? "Loading Gemma…" : "Recognizing audio…").font(.caption)
+                        }.accessibilityLabel("Voice message: recognition in progress")
+                    case .recognized: Text(message.text).textSelection(.enabled).font(.body)
+                    case .failed(let detail):
+                        Label("Voice message failed", systemImage: "exclamationmark.circle")
+                        Text(detail).font(.caption)
+                    case .cancelled: Text("Voice message cancelled").font(.body)
+                    }
+                } else {
+                    Text(message.text).textSelection(.enabled).font(.body)
+                }
                 HStack {
                     Text(message.timestamp.formatted(date: .omitted, time: .shortened)).font(.caption2)
                     if let mode = message.mode { Text(mode).font(.caption2).lineLimit(2) }
@@ -286,10 +297,10 @@ struct AssistantView: View {
             }
             HStack(alignment: .bottom, spacing: 10) {
                 HoldToTalkButton(isRecording: state.voiceInput.isRecording,
-                                 enabled: !state.isAnswering && !state.isRunningPersonaRegression && !state.voiceInput.isFinishing,
+                                 enabled: !state.isAnswering && !state.isRunningPersonaRegression && !state.isProcessingVoice && !state.voiceInput.isFinishing,
                                  onPress: {
                     guard !state.voiceInput.isPreparing, !state.voiceInput.isRecording else { return }
-                    isHolding = true; voicePrefix = question; inputFocused = false; state.speech.stop()
+                    isHolding = true; inputFocused = false; state.speech.stop()
                     state.voiceInput.press(locale: state.speechLocale) { file, locale in
                         try await state.assistant.understandAudio(file: file, locale: locale)
                     }
@@ -306,11 +317,11 @@ struct AssistantView: View {
                     .opacity(question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || state.isAnswering || state.isRunningPersonaRegression || voiceBusy ? 0.4 : 1)
                     .accessibilityLabel("Send message")
             }
-            Text(state.voiceInput.isPreparing ? "Preparing microphone…" : state.voiceInput.isRecording ? "Listening… Release to finish" : state.voiceInput.isFinishing ? "Gemma is understanding your recording…" : "Hold to talk to Gemma · Review, then send")
+            Text(state.voiceInput.isPreparing ? "Preparing microphone…" : state.voiceInput.isRecording ? "Listening… Release to finish" : state.voiceInput.isFinishing ? "Gemma is understanding your recording…" : "Hold to talk · Release to send")
                 .font(.caption2).foregroundStyle(.secondary)
         }.padding(.horizontal).padding(.vertical, 12).background(.bar)
     }
-    private var voiceBusy: Bool { state.voiceInput.isPreparing || state.voiceInput.isRecording || state.voiceInput.isFinishing }
+    private var voiceBusy: Bool { state.isProcessingVoice || state.voiceInput.isPreparing || state.voiceInput.isRecording || state.voiceInput.isFinishing }
     private func send(_ text: String) {
         guard !state.isAnswering, !state.isRunningPersonaRegression, !voiceBusy, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         let outgoing = text; question = ""; inputFocused = false
@@ -460,7 +471,7 @@ struct SettingsView: View {
                         Text("Chinese (Mandarin)").tag("zh-CN")
                     }.disabled(state.voiceInput.isRecording || state.voiceInput.isPreparing || state.voiceInput.isFinishing)
                     Toggle("Read Joe's replies automatically", isOn: $state.autoSpeak)
-                    Text("Hold to record, release to finish, then review and send. Your recording goes directly to the on-device Gemma audio encoder; Apple Speech Recognition is not used. Record up to 20 seconds. The model loads automatically when needed. Playback follows your iPhone media volume and current audio route.")
+                    Text("Hold to record and release to send automatically. A loading message becomes the recognized words, then Joe replies. Your recording goes directly to the on-device Gemma audio encoder; Apple Speech Recognition is not used. Record up to 20 seconds. The model loads automatically when needed. Playback follows your iPhone media volume and current audio route.")
                         .font(.caption).foregroundStyle(.secondary)
                     Button("Test sound") { state.voiceInput.cancel(); state.speech.testSound() }
                     Button("Test voice") { state.voiceInput.cancel(); state.speech.speak("Hi, I'm Joe. This voice is generated on your iPhone.") }

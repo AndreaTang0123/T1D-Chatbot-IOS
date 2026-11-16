@@ -160,6 +160,10 @@ final class SpeechPCMRenderer: @unchecked Sendable {
 /// Audio stays local. Authorization, capture, and finalization have separate cancellation guards.
 /// Captures WAV audio only. Speech understanding belongs to Gemma, not Apple Speech.
 @MainActor @Observable final class SpeechInputService {
+    var onSubmitted: ((UUID) -> Void)?
+    var onRecognized: ((UUID, String) -> Void)?
+    var onFailed: ((UUID, String) -> Void)?
+    var onCancelled: ((UUID) -> Void)?
     private(set) var transcript = ""
     private(set) var isPreparing = false
     private(set) var isRecording = false
@@ -247,6 +251,7 @@ final class SpeechPCMRenderer: @unchecked Sendable {
         guard duration >= 0.3 else { try? FileManager.default.removeItem(at: url); message = "Recording was too short. Hold to talk again."; return }
         isFinishing = true
         let token = sessionID; let language = locale
+        onSubmitted?(token)
         finishTask = Task { [weak self] in
             // Keep the file alive until native inference/cancellation has finished consuming it.
             defer { try? FileManager.default.removeItem(at: url) }
@@ -254,16 +259,22 @@ final class SpeechPCMRenderer: @unchecked Sendable {
                 let text = try await understand(url, language)
                 try Task.checkCancellation()
                 guard let self, self.sessionID == token else { return }
-                self.transcript = text; self.message = "Gemma understood your recording. Check numbers and dates, then send."
+                self.transcript = text; self.message = nil
+                self.isFinishing = false; self.finishTask = nil; self.understand = nil
+                self.onRecognized?(token, text)
             } catch {
                 guard let self, self.sessionID == token, !Task.isCancelled else { return }
-                self.message = (error as? GemmaAudioError)?.errorDescription ?? "Gemma could not process this recording. Try again or type your message."
+                let detail = (error as? GemmaAudioError)?.errorDescription ?? "Gemma could not process this recording. Try again or type your message."
+                self.message = detail
+                self.isFinishing = false; self.finishTask = nil; self.understand = nil
+                self.onFailed?(token, detail)
             }
             guard let self, self.sessionID == token else { return }
             self.isFinishing = false; self.finishTask = nil; self.understand = nil
         }
     }
     func cancel() {
+        let cancelledID = sessionID
         sessionID = UUID(); gate.cancel()
         permissionTask?.cancel(); permissionTask = nil
         finishTask?.cancel(); finishTask = nil; limitTask?.cancel(); limitTask = nil
@@ -271,6 +282,7 @@ final class SpeechPCMRenderer: @unchecked Sendable {
         if let file { try? FileManager.default.removeItem(at: file) }; file = nil
         isPreparing = false; isRecording = false; isFinishing = false; understand = nil
         deactivateAudio()
+        onCancelled?(cancelledID)
     }
     private func deactivateAudio() {
         if ownsAudioSession {

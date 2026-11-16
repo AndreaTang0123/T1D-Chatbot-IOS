@@ -20,7 +20,7 @@ Joe uses the pinned Gemma 4 E2B weights. Current customization is runtime instru
 
 For conversational tone start with JoeInstructions; for data access or inaccurate fact handling inspect the tool payload and validator rather than weakening the safety checks. Update prompt versions and regression fixtures when changing model behavior.
 
-Native audio flow: microphone → temporary WAV → Gemma audio encoder and isolated question-understanding task → editable draft → Send → existing Joe fact-query/answer pipeline. Both model passes are local. The first pass does not answer the medical question or receive health facts. This review step lets the user correct numbers/units and lets Swift select tools before generating a grounded answer. Audio is not retained in chat/research logs or uploaded.
+Native audio flow: microphone → temporary WAV → Gemma audio encoder and isolated question-understanding task → pending user message bubble → recognized text in the same bubble → automatic existing Joe fact-query/answer pipeline. Both model passes are local. The first pass does not answer the medical question or receive health facts. Recognition completion automatically submits the words through Swift tool selection and grounded-answer checks. The user no longer reviews the audio text before sending; ASR mistakes remain possible and the transcript is visible in the conversation. Typed drafts remain independent. Audio is not retained in chat/research logs or uploaded.
 
 ## Andrea's T1D Ally persona revision
 
@@ -35,3 +35,5 @@ The supplied medical table is not a second source of clinical thresholds. Swift 
 ## Calendar interpretation and iCloud scope
 
 For conversational calendar style edit JoeInstructions and the calendar hint in GemmaModel. CalendarReplyStyle.swift selects overview versus explicit full-list mode, supplies grounded highlights, and validates highlight time/date associations. CalendarService.swift filters EventKit source calendars before both explicit queries and lifestyle snapshots; source identification is conservative and based on public EventKit type/name metadata. Ordinary summaries may select highlights; only explicit all/full-list requests require every event. Interpretations are tentative impressions of recorded commitments, never evidence of mood or free time. Local factual fallback is still used on model/check failure.
+
+`VoiceMessageDelivery.swift` tracks one pending recording bubble by UUID and prevents duplicate or late completion after cancellation/failure. AppState connects submission/result/cancellation callbacks to the chat and replaces a pending bubble in place before asking Joe. Pending, failed and canceled placeholders never enter model history or assistant-turn persistence. SpeechInputService retains and deletes its WAV through native completion/cancellation, then ends ASR work before the separate answer task starts.
