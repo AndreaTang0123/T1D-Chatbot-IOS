@@ -12,6 +12,20 @@ import JoeCore
         var nextStart: Date?
         var currentEnd: Date?
     }
+    private var iCloudCalendars: [EKCalendar] {
+        guard hasAccess else { return [] }
+        return store.calendars(for: .event).filter { calendar in
+            guard calendar.type != .subscription, calendar.type != .birthday, let source = calendar.source else { return false }
+            let type = source.sourceType == .calDAV ? "calDAV" : source.sourceType == .mobileMe ? "mobileMe" : "other"
+            return ICloudCalendarScope.includes(sourceType: type, title: source.title)
+        }
+    }
+    var sourceStatus: String {
+        guard enabled else { return "iCloud calendar collection is off." }
+        guard hasAccess else { return "Full calendar access is required." }
+        let count = iCloudCalendars.count
+        return count == 0 ? "No identifiable iCloud calendars are visible. Enable iCloud Calendar sync on this iPhone." : "iCloud only · \(count) visible calendars"
+    }
     func authorize() async throws -> Bool {
         let allowed = try await store.requestFullAccessToEvents()
         UserDefaults.standard.set(allowed, forKey: "calendarEnabled")
@@ -25,7 +39,9 @@ import JoeCore
         guard range.scope != .unsupported else { return result(.unsupportedRange) }
         guard enabled else { return result(.collectionDisabled) }
         guard hasAccess else { return result(.notAuthorized) }
-        let predicate = store.predicateForEvents(withStart: range.start, end: range.end, calendars: nil)
+        let calendars = iCloudCalendars
+        guard !calendars.isEmpty else { return result(.noICloudCalendars) }
+        let predicate = store.predicateForEvents(withStart: range.start, end: range.end, calendars: calendars)
         // EventKit's synchronous query has no error callback. Empty means no visible local events, not proof of server coverage.
         let events = store.events(matching: predicate).filter { $0.status != .canceled }.map {
             CalendarDayEvent(title: $0.title ?? "", start: $0.startDate, end: $0.endDate, allDay: $0.isAllDay)
@@ -35,8 +51,10 @@ import JoeCore
     }
     func snapshot(at now: Date) -> Snapshot {
         guard enabled, EKEventStore.authorizationStatus(for: .event) == .fullAccess else { return Snapshot() }
-        let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-3600), end: now.addingTimeInterval(6*3600), calendars: nil)
-        let events = store.events(matching: predicate).filter { !$0.isAllDay }.sorted { $0.startDate < $1.startDate }
+        let calendars = iCloudCalendars
+        guard !calendars.isEmpty else { return Snapshot() }
+        let predicate = store.predicateForEvents(withStart: now.addingTimeInterval(-3600), end: now.addingTimeInterval(6*3600), calendars: calendars)
+        let events = store.events(matching: predicate).filter { !$0.isAllDay && $0.status != .canceled }.sorted { $0.startDate < $1.startDate }
         let current = events.first { $0.startDate <= now && $0.endDate > now }
         let next = events.first { $0.startDate > now }
         return Snapshot(current: current.map { ContextClassifier.calendarCategory($0.title ?? "") },

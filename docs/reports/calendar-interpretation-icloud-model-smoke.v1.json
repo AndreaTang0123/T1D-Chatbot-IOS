@@ -1,0 +1,205 @@
+{
+  "scope": "Actual pinned Gemma 4 E2B on Mac CPU with synthetic events; not a real iCloud account or iPhone acceptance test",
+  "coreXCTestCount": 104,
+  "unsignedIOSBuild": "passed",
+  "validatedModelCases": 5,
+  "modelCaseCount": 5,
+  "turns": [
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T21:58:19Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v14; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T21:58:29Z",
+      "freshnessReasons": [],
+      "id": "6FDD9F86-8B08-4EDE-AFA9-7939E309F5AC",
+      "latencyMilliseconds": 10102.538958,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v5",
+        "persona": "joe.persona.v6",
+        "safety": "joe.safety.v3"
+      },
+      "question": "What's on my calendar this week?",
+      "regressionCaseID": "en-calendar-week",
+      "response": "This week (today through 2026-11-22). today Research meeting at 10:00. 2026-11-18 Ballet class at 18:00.\n\nIt looks like you have a couple of scheduled events this week, one on Monday and another on Wednesday evening. It seems like a fairly balanced schedule with a mix of work and something for your body. Is there anything specific you are thinking about for those days?",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T21:58:19Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v9"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T21:58:19Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v14; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T21:58:23Z",
+      "freshnessReasons": [],
+      "id": "97C147A8-7ED4-4A74-8D0E-03A62B75BF2F",
+      "latencyMilliseconds": 4661.800041,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v5",
+        "persona": "joe.persona.v6",
+        "safety": "joe.safety.v3"
+      },
+      "question": "What's on my calendar today?",
+      "regressionCaseID": "en-calendar-interpretation",
+      "response": "Today, Morning meeting at 09:00 and Afternoon class at 15:00. It looks like you have a fairly packed day with meetings and class. Is there anything specific you need to prepare for those events?",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T21:58:19Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v9"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T21:58:19Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v14; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T21:58:24Z",
+      "freshnessReasons": [],
+      "id": "C1360F61-66C7-4A27-963D-3D3DDCB95888",
+      "latencyMilliseconds": 5152.802292,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v5",
+        "persona": "joe.persona.v6",
+        "safety": "joe.safety.v3"
+      },
+      "question": "今天我的日程怎么样？",
+      "regressionCaseID": "zh-calendar-interpretation",
+      "response": "今天，Morning meeting 在09:00到10:00，Afternoon class 在15:00到16:00。看起来你今天有两项安排，上午和下午都有课程或会议。你今天有什么特别想聊聊的事情吗？",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T21:58:19Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v9"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T21:58:19Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v14; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T21:58:25Z",
+      "freshnessReasons": [],
+      "id": "823B0579-68EB-4E6A-9416-DBC47D6F175F",
+      "latencyMilliseconds": 6154.846792,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v5",
+        "persona": "joe.persona.v6",
+        "safety": "joe.safety.v3"
+      },
+      "question": "What's on my calendar today?",
+      "regressionCaseID": "en-calendar-six-events",
+      "response": "Today, Class at 09:30 and TRAINING WIRE at 10:30 are scheduled, followed by a Research Meeting from 13:00 to 14:30 and a Private Appointment at 16:30. It looks like a fairly busy day with a mix of classes, training, and meetings. Is there anything specific on your mind about your schedule?",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T21:58:19Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v9"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T21:58:19Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v14; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T21:58:29Z",
+      "freshnessReasons": [],
+      "id": "CC6A12A0-8F09-4D7A-B850-F14403517AAC",
+      "latencyMilliseconds": 10398.273125,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v5",
+        "persona": "joe.persona.v6",
+        "safety": "joe.safety.v3"
+      },
+      "question": "List all calendar events today",
+      "regressionCaseID": "en-calendar-complete-list",
+      "response": "Calendar range: today through today (GMT)\ntoday All day No-meeting day\ntoday All day Team member - PTO\ntoday 09:30–10:45 Class\ntoday 10:30–11:00 TRAINING WIRE\ntoday 13:00–14:30 Research Meeting\ntoday 16:30–17:00 Private Appointment\nIt looks like you have a fairly busy day with classes, a training session, a research meeting, and a private appointment. You also have a no-meeting day and PTO scheduled with your team. Is there anything specific on your mind about this schedule?",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T21:58:19Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v9"
+    }
+  ],
+  "notes": [
+    "Ordinary replies provide factual highlights plus tentative interpretation. Explicit complete-list replies retain all records.",
+    "Earlier synthetic runs exposed title translation, language switching, wrong weekday interpretation, repeat-title screening and Chinese-adjacent clock matching; prompt and validator changes address those cases. Passing checks do not prove every semantic claim or consistent tone.",
+    "iCloud filtering is exercised by pure policy tests and iOS compilation. Verify actual phone source labels/account exclusions; unknown sources fail closed.",
+    "Only synthetic fixtures log raw generated text in the smoke harness; production rejected wording remains unretained."
+  ]
+}

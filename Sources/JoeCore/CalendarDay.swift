@@ -48,7 +48,7 @@ public struct CalendarQueryRange: Sendable {
 
 /// Transient, explicitly requested day query; titles enter local model prompts only for an explicit calendar request, never lifestyle feature records.
 public struct CalendarDayResult: Codable, Sendable {
-    public enum Status: String, Codable, Sendable { case available, collectionDisabled, notAuthorized, failed, unsupportedRange }
+    public enum Status: String, Codable, Sendable { case available, collectionDisabled, notAuthorized, failed, unsupportedRange, noICloudCalendars }
     public let scope: CalendarQueryRange.Scope
     public let queriedAt: Date?
     public let status: Status
@@ -75,13 +75,14 @@ public struct CalendarDayResult: Codable, Sendable {
         let zh = language == .chinese
         switch status {
         case .collectionDisabled: return zh ? "Joe 的日历采集开关已关闭。请在 app 的 Settings 中开启后重试。" : "Calendar collection is off in Joe. Turn it on in the app's Settings and retry."
+        case .noICloudCalendars: return zh ? "未找到可识别的 iCloud 日历。请开启此手机的 iCloud 日历同步；Joe 不会改读其他账户。" : "No identifiable iCloud calendars are visible. Enable iCloud Calendar sync on this iPhone; Joe will not read another account instead."
         case .notAuthorized: return zh ? "iOS 未授予完整日历读取权限。请在系统设置中允许 Joe 访问日历后重试。" : "iOS has not granted full calendar read access. Allow Joe calendar access in iPhone Settings and retry."
         case .unsupportedRange: return zh ? "请明确选择本周、今天或明天；暂不支持其他日期范围，我不会用本周的数据替代。" : "Please choose this week, today or tomorrow. Other or conflicting date ranges are not supported; I will not substitute this week’s events."
         case .failed: return zh ? "这次日历读取失败，请重试。无法判断所选范围内是否有事件。" : "The calendar could not be read. Please retry; this does not mean the requested range has no events."
         case .available: break
         }
         guard isValid(at: now) else { return zh ? "日历查询已过期，请重新查询所需日期范围。" : "This calendar result is from another day or has expired. Ask again to refresh the requested range." }
-        guard !events.isEmpty else { return rangeHeader + "\n" + (zh ? "该范围内的可读取日历中没有事件；这不代表账户已经完整同步。" : "No events are visible in this range; this does not prove account sync is complete.") }
+        guard !events.isEmpty else { return rangeHeader + "\n" + (zh ? "该范围内可读取的 iCloud 日历中没有事件；这不代表账户已经完整同步。" : "No events are visible in the iCloud calendars for this range; this does not prove account sync is complete.") }
         let date = DateFormatter(); date.locale = Locale(identifier: zh ? "zh_CN" : "en_US")
         date.timeZone = timeZone; date.dateStyle = .medium; date.timeStyle = .none
         let time = DateFormatter(); time.locale = date.locale; time.timeZone = timeZone; time.dateFormat = "HH:mm"

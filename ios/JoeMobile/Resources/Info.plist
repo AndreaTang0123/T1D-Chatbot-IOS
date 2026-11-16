@@ -14,7 +14,7 @@
 <key>UISupportedInterfaceOrientations</key><array><string>UIInterfaceOrientationPortrait</string></array>
 <key>NSMicrophoneUsageDescription</key><string>Joe records your question while you hold the talk button. The on-device Gemma model understands the recording; audio is not uploaded and is deleted after processing.</string>
 <key>NSHealthShareUsageDescription</key><string>Joe reads historical blood glucose for on-device summaries, plus steps, heart rate, workouts, and sleep to study associations between lifestyle context and glucose forecasts on this device.</string>
-<key>NSCalendarsFullAccessUsageDescription</key><string>Joe classifies recent calendar events into lifestyle categories on this device without storing titles, notes, or attendees.</string>
+<key>NSCalendarsFullAccessUsageDescription</key><string>Joe reads synced iCloud events for local schedule summaries and lifestyle categories. Requested titles and times may be saved in chat. Notes and attendees are not read.</string>
 <key>NSLocationWhenInUseUsageDescription</key><string>Joe converts approximate locations into your chosen place categories without recording a continuous route.</string>
 <key>NSLocationAlwaysAndWhenInUseUsageDescription</key><string>Optional: use low-power Visits and geofences to record changes in place categories.</string>
 <key>UIBackgroundModes</key><array><string>fetch</string></array>

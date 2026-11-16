@@ -56,6 +56,8 @@ public struct AssistantTurnRecord: Codable, Sendable, Identifiable {
 public extension AssistantTurnRecord {
     var fallbackDetails: [String] {
         let labels = [
+            "calendar_unsupported_weekday": "The model claimed a weekday or weekend not supported by the recorded event dates.",
+            "calendar_unverified_free_time": "The model claimed free time beyond what the visible calendar establishes.",
             "calendar_range_omitted": "The model omitted or changed the selected date range or timezone.",
             "calendar_date_omitted": "The model omitted one or more event dates.",
             "calendar_time_omitted": "The model omitted an event time or all-day label.",

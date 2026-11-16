@@ -8,7 +8,7 @@ import JoeCore
     func respond(to request: AssistantModelRequest) async throws -> ModelReply {
         let payload = try GemmaPromptBuilder.build(request: request)
         let text = try await runtime.generate(prompt: payload.prompt, maxOutputTokens: payload.maxOutputTokens)
-        if CommandLine.arguments.contains("--time-evidence-only") { print("SYNTHETIC RAW: \(text)") }
+        if CommandLine.arguments.contains("--time-evidence-only") || CommandLine.arguments.contains("--calendar-only") { print("SYNTHETIC RAW: \(text)") }
         return ModelReply(text: text, usedTools: payload.usedTools, factSnapshot: request.snapshot)
     }
 }
@@ -136,6 +136,16 @@ import JoeCore
         print("CALENDAR: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
         turns.append(turn)
         let today = CalendarQueryRange(question: "calendar today", now: now, timeZone: zone)
+        let lightEvents = [
+            CalendarDayEvent(title: "Morning meeting", start: today.start.addingTimeInterval(9*3600), end: today.start.addingTimeInterval(10*3600)),
+            CalendarDayEvent(title: "Afternoon class", start: today.start.addingTimeInterval(15*3600), end: today.start.addingTimeInterval(16*3600))]
+        let lightDay = CalendarDayResult(status: .available, dayStart: today.start, dayEnd: today.end, timeZone: zone, events: lightEvents, scope: .today, queriedAt: now)
+        let lightSnapshot = AssistantSnapshot(glucose: nil, forecast: nil, treatments: [], context: nil, now: now, calendarDay: lightDay)
+        for question in ["What's on my calendar today?", "今天我的日程怎么样？"] {
+            let overview = await coordinator.answer(question, snapshot: lightSnapshot, history: [], regressionCaseID: question.contains("今天") ? "zh-calendar-interpretation" : "en-calendar-interpretation")
+            print("OVERVIEW: \(overview.response)\nMODE: \(overview.mode)\nREJECT: \(overview.validationReasons)")
+            turns.append(overview)
+        }
         let sixEvents = [
             CalendarDayEvent(title: "No-meeting day", start: today.start, end: today.end, allDay: true),
             CalendarDayEvent(title: "Team member - PTO", start: today.start, end: today.end, allDay: true),
@@ -148,6 +158,9 @@ import JoeCore
         let todayTurn = await coordinator.answer("What's on my calendar today?", snapshot: todaySnapshot, history: [], regressionCaseID: "en-calendar-six-events")
         print("SIX EVENTS: \(todayTurn.response)\nMODE: \(todayTurn.mode)\nREJECT: \(todayTurn.validationReasons)")
         turns.append(todayTurn)
+        let complete = await coordinator.answer("List all calendar events today", snapshot: todaySnapshot, history: [], regressionCaseID: "en-calendar-complete-list")
+        print("COMPLETE: \(complete.response)\nMODE: \(complete.mode)\nREJECT: \(complete.validationReasons)")
+        turns.append(complete)
         }
         if timeOnly {
             let now = Date(); let zone = TimeZone(identifier: "America/New_York")!

@@ -141,3 +141,12 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Empty per-type reads do not imply denied permission or zero. Separately verify disabled collection, locked-device/query error and no visible records. Allow partial success: steps can succeed while HR fails.
 - [ ] Yesterday/week step totals and other unsupported windows are explicitly unsupported, never substituted with today's total. A generation crossing local midnight or query expiry must not reuse the prior day's total as today.
 - [ ] Existing urgent CGM safety still takes priority over an activity question. No heart-rate diagnosis or treatment advice is generated.
+
+## Conversational iCloud calendar replies
+
+- [ ] Set up distinguishable iCloud, Google/Exchange and local events in the same time range. Today/tomorrow/week chat queries and current/next lifestyle categories must use only identifiable iCloud sources. Other accounts' event titles must not enter current tool evidence.
+- [ ] With no visible iCloud source, return the specific iCloud-unavailable message, not an empty day and never all-account results. Distinguish full-access denial, collection off and an empty synced iCloud calendar. Check source status in Settings.
+- [ ] With a morning meeting and afternoon class, ask in English and Chinese. Expect relevant factual highlights, a tentative schedule interpretation and an optional natural follow-up; no raw technical header for today's ordinary overview. Exact event titles remain unchanged even inside Chinese prose.
+- [ ] Weekly highlights retain actual event dates and explicit range bounds. Omitted events/end times are allowed only in overview mode; swapped dates/start times and assertions that unrecorded time is free remain rejected.
+- [ ] Ask “List all calendar events today” / “列出本周所有日程”: include every event, all-day labels and start/end times, then an optional interpretation.
+- [ ] Voice reads the visible answer normally. Model/check failures show the existing factual fallback and diagnostics, not fabricated interpretation. Old saved replies are not erased or reclassified as new iCloud evidence.

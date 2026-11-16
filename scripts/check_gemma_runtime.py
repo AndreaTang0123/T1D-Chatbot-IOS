@@ -31,12 +31,13 @@ with tempfile.TemporaryDirectory(prefix='JoeGemmaSmoke-') as folder:
     dependency = (f'.package(path: {json.dumps(str(args.runtime_package.resolve()))})'
                   if args.runtime_package else
                   '.package(url: "https://github.com/google-ai-edge/LiteRT-LM", exact: "0.19.1")')
+    runtime_identity = args.runtime_package.resolve().name if args.runtime_package else 'LiteRT-LM'
     (work / 'Package.swift').write_text(f'''// swift-tools-version: 6.0
 import PackageDescription
 let package = Package(name: "Smoke", platforms: [.macOS(.v14)], dependencies: [
     {dependency}, .package(path: {json.dumps(str(ROOT))})
 ], targets: [.executableTarget(name: "Smoke", dependencies: [
-    .product(name: "LiteRTLM", package: "LiteRT-LM"),
+    .product(name: "LiteRTLM", package: {json.dumps(runtime_identity)}),
     .product(name: "JoeCore", package: "T1D-Chatbot-IOS")
 ], swiftSettings: [.swiftLanguageMode(.v5)])])
 ''')

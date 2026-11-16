@@ -137,3 +137,5 @@ Ask “Summarize my glucose over the past 3 days” / “总结最近三天血�
 See [model customization files](docs/MODEL_CUSTOMIZATION.md) for persona, audio prompts, tool payloads, sampling and validation locations.
 
 Apple Health questions now support today's recorded steps and the latest recorded heart-rate sample within a day, including `hr`/`bpm` and Chinese queries. The Health step total uses the phone's local day; the HR reply includes its actual measurement time and is not real-time monitoring. Empty reads, query failure and disabled collection are distinct. Other Health time windows remain unsupported. Existing 30-minute causal context features are unchanged.
+
+Calendar replies now default to conversational highlights, a short tentative interpretation of recorded commitments and an optional follow-up. Ask explicitly for all events to get the complete list. Both explicit queries and lifestyle calendar categories use only identifiable iCloud sources; Settings shows availability. Missing iCloud calendars never fall back to reading other accounts. See the current architecture and device checks for source-identification limitations and required iPhone acceptance testing.

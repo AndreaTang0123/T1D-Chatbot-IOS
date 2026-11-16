@@ -47,7 +47,7 @@ final class CalendarDayTests: XCTestCase {
         let s = AssistantSnapshot(glucose: nil, forecast: nil, treatments: [], context: nil, now: start, calendarDay: day)
         let request = AssistantModelRequest(question: "Check my calendar", history: [], snapshot: s, decision: .noData, allowedTools: [.context])
         let payload = try GemmaPromptBuilder.build(request: request)
-        XCTAssertTrue(payload.prompt.contains("Copy the complete list below")); XCTAssertTrue(payload.prompt.contains("My meeting")); XCTAssertTrue(payload.prompt.contains("calendarDay"))
+        XCTAssertTrue(payload.prompt.contains("conversational highlights")); XCTAssertTrue(payload.prompt.contains("My meeting")); XCTAssertTrue(payload.prompt.contains("calendarDay"))
         XCTAssertEqual(payload.usedTools, [.context])
         let model = FakeAssistantModel()
         model.reply = ModelReply(text: "I can check your calendar. Open your calendar for details.", usedTools: [.context])
