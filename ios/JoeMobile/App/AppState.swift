@@ -187,12 +187,14 @@ struct ChatMessage: Identifiable {
             nextEventCategory: calendarSnapshot.next, nextEventStart: calendarSnapshot.nextStart,
             currentEventEnd: calendarSnapshot.currentEnd, glucoseHistory: GlucoseHistorySummary(samples: historySamples, days: historyWindow ?? historyDays, now: now),
             contextAccess: ["calendar": !calendar.enabled ? "collection_disabled" : calendar.hasAccess ? "authorized" : "not_authorized",
-                            "location": !location.collectionEnabled ? "collection_disabled" : location.hasAccess ? "authorized" : "not_authorized"], calendarDay: calendarDay)
+                            "health": health.enabled ? "collection_enabled_read_access_unknown" : "collection_disabled",
+                            "location": !location.collectionEnabled ? "collection_disabled" : location.hasAccess ? "authorized" : "not_authorized"], calendarDay: calendarDay, healthActivity: healthActivity)
     }
     func safetyDecision(at now: Date) -> SafetyDecision {
         let snapshot = assistantSnapshot(at: now)
         return SafetyDecisionEngine(policy: snapshot.policy).evaluate(cgm: snapshot.currentGlucose, forecast: snapshot.forecastResult)
     }
+    private var healthActivity: HealthActivityResult?
     private var calendarDay: CalendarDayResult?
     var isInBackground = false
     func ask(_ text: String) async {
@@ -207,6 +209,7 @@ struct ChatMessage: Identifiable {
             if GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays) == 3 { await refreshThreeDayHistory() }
         }
         if intent.context && !intent.sharingExperience {
+            healthActivity = await health.activity(at: Date())
             // Refresh local permission-gated sources independently of Nightscout synchronization.
             location.refresh()
             let now = Date()

@@ -70,6 +70,46 @@ import JoeCore
         }
         return result
     }
+    /// Chat evidence is separate from causal forecast windows: today's merged steps and a dated HR sample.
+    func activity(at now: Date) async -> HealthActivityResult {
+        let start = Calendar.current.startOfDay(for: now)
+        guard enabled, HKHealthStore.isHealthDataAvailable() else {
+            let status: HealthReadStatus = !enabled ? .collectionDisabled : .deviceUnavailable
+            return HealthActivityResult(queriedAt: now, dayStart: start, stepsStatus: status, heartRateStatus: status)
+        }
+        let stepsType = HKQuantityType.quantityType(forIdentifier: .stepCount)!
+        let hrType = HKQuantityType.quantityType(forIdentifier: .heartRate)!
+        var steps: Double?; var stepsStatus: HealthReadStatus = .noVisibleRecords
+        do {
+            steps = try await withCheckedThrowingContinuation { continuation in
+                let predicate = HKQuery.predicateForSamples(withStart: start, end: now, options: [.strictStartDate, .strictEndDate])
+                let query = HKStatisticsQuery(quantityType: stepsType, quantitySamplePredicate: predicate, options: .cumulativeSum) { _, stats, error in
+                    if let error { continuation.resume(throwing: error) }
+                    else { continuation.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count())) }
+                }
+                store.execute(query)
+            }
+            stepsStatus = steps == nil ? .noVisibleRecords : .available
+        } catch { stepsStatus = .readFailed }
+        var bpm: Double?; var measured: Date?; var hrStatus: HealthReadStatus = .noVisibleRecords
+        do {
+            let sample: HKQuantitySample? = try await withCheckedThrowingContinuation { continuation in
+                let predicate = HKQuery.predicateForSamples(withStart: now.addingTimeInterval(-86400), end: now, options: [.strictStartDate, .strictEndDate])
+                let query = HKSampleQuery(sampleType: hrType, predicate: predicate, limit: 1,
+                    sortDescriptors: [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]) { _, rows, error in
+                    if let error { continuation.resume(throwing: error) }
+                    else { continuation.resume(returning: rows?.first as? HKQuantitySample) }
+                }
+                store.execute(query)
+            }
+            bpm = sample?.quantity.doubleValue(for: HKUnit.count().unitDivided(by: .minute()))
+            measured = sample?.endDate; hrStatus = sample == nil ? .noVisibleRecords : .available
+        } catch { hrStatus = .readFailed }
+        // A permission toggle may have changed while the asynchronous queries were running.
+        guard enabled else { return HealthActivityResult(queriedAt: now, dayStart: start, stepsStatus: .collectionDisabled, heartRateStatus: .collectionDisabled) }
+        return HealthActivityResult(queriedAt: now, dayStart: start, stepsStatus: stepsStatus, stepsToday: steps,
+            heartRateStatus: hrStatus, heartRateBpm: bpm, heartRateMeasuredAt: measured)
+    }
     func glucoseHistory(at now: Date) async throws -> [GlucoseSample] {
         guard enabled, HKHealthStore.isHealthDataAvailable() else { return [] }
         let type = HKQuantityType.quantityType(forIdentifier: .bloodGlucose)!

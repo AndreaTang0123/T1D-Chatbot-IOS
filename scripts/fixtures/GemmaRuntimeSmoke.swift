@@ -17,6 +17,23 @@ import JoeCore
         let model = URL(fileURLWithPath: CommandLine.arguments[1])
         try GemmaModelSpec.verify(file: model)
         print("SHA256 verified")
+        if let index = CommandLine.arguments.firstIndex(of: "--audio-file") {
+            let audio = URL(fileURLWithPath: CommandLine.arguments[index + 1])
+            let runtime = GemmaRuntime()
+            try await runtime.load(modelURL: model, cacheURL: FileManager.default.temporaryDirectory.appendingPathComponent("JoeGemmaAudioCache"))
+            let text = try await runtime.understandAudio(file: audio, locale: "en-US")
+            print("SYNTHETIC AUDIO QUESTION: \(text)")
+            guard text.lowercased().contains("bolus") else { throw GemmaAudioError.unintelligible }
+            let now = Date()
+            let snapshot = AssistantSnapshot(glucose: GlucoseSample(id: "synthetic", timestamp: now, glucose: 120, receivedAt: now), forecast: nil, treatments: [], context: nil, now: now)
+            let payload = try GemmaPromptBuilder.build(request: AssistantModelRequest(question: "Hello Joe", history: [], snapshot: snapshot, decision: .normal, allowedTools: []))
+            let reply = try await runtime.generate(prompt: payload.prompt, maxOutputTokens: payload.maxOutputTokens)
+            guard !reply.isEmpty else { throw AssistantFailure.generationError }
+            await runtime.unload()
+            let report: [String: Any] = ["scope": "Synthetic speech on Mac CPU; not an iPhone microphone or accuracy benchmark", "audioQuestionVersion": GemmaAudioQuestion.version, "audioQuestion": text, "textReplyAfterAudio": reply, "runtime": GemmaModelSpec.runtimeVersion, "sha256": GemmaModelSpec.sha256]
+            try JSONSerialization.data(withJSONObject: report, options: [.prettyPrinted, .sortedKeys]).write(to: URL(fileURLWithPath: CommandLine.arguments[2]))
+            return
+        }
         if CommandLine.arguments.contains("--lifecycle-only") {
             let runtime = GemmaRuntime()
             let lifecycle = LocalModelLifecycle(idleSeconds: 0.1, backgroundSeconds: 0.05, load: {
@@ -67,6 +84,23 @@ import JoeCore
         try await provider.runtime.load(modelURL: model, cacheURL: URL(fileURLWithPath: FileManager.default.temporaryDirectory.appendingPathComponent("JoeGemmaSmokeCache").path))
         print("Loaded in \(Date().timeIntervalSince(start))s")
         let coordinator = AssistantCoordinator(provider: provider)
+        if CommandLine.arguments.contains("--health-only") {
+            let now = Date(); let zone = TimeZone(identifier: "America/New_York")!
+            var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
+            let health = HealthActivityResult(queriedAt: now, dayStart: calendar.startOfDay(for: now), timeZone: zone,
+                stepsStatus: .available, stepsToday: 4321, heartRateStatus: .available, heartRateBpm: 72, heartRateMeasuredAt: now.addingTimeInterval(-7200))
+            let snapshot = AssistantSnapshot(glucose: nil, forecast: nil, treatments: [], context: nil, now: now, timeZone: zone, healthActivity: health)
+            var results: [AssistantTurnRecord] = []
+            for question in ["How many steps have I taken today?", "What is my latest hr?", "我的心率是多少？"] {
+                let turn = await coordinator.answer(question, snapshot: snapshot, history: [], regressionCaseID: "synthetic-health-" + String(results.count))
+                print("HEALTH: \(turn.response)\nMODE: \(turn.mode)\nREJECT: \(turn.validationReasons)")
+                results.append(turn)
+            }
+            let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]; encoder.dateEncodingStrategy = .iso8601
+            try encoder.encode(results).write(to: URL(fileURLWithPath: CommandLine.arguments[2]))
+            await provider.runtime.unload()
+            return
+        }
         var turns: [AssistantTurnRecord] = []
         let timeOnly = CommandLine.arguments.contains("--time-evidence-only")
         let calendarOnly = CommandLine.arguments.contains("--calendar-only") || timeOnly

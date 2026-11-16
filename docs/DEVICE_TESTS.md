@@ -34,7 +34,7 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] A cold launch selects Joe; tab order is Joe, Overview, Lifestyle, Settings.
 - [ ] Typed messages and Joe responses remain visible across tab changes, with correct bubble alignment and scroll-to-latest behavior; repeated sends do not duplicate messages.
 - [ ] Holding the microphone requests permissions only on demand. Releasing before authorization completes never starts a recording afterward.
-- [ ] On-device transcription in the selected English/Mandarin language updates a draft; releasing finishes recognition; sending uses the reviewed text exactly once.
+- [ ] Native Gemma audio input in English/Mandarin updates an editable draft after release; no Apple Speech permission is requested. Test insulin units, decimals, dates, silence and background noise; sending uses the reviewed text exactly once.
 - [ ] Denied microphone/speech access and unavailable on-device recognition show actionable messages while typing remains available.
 - [ ] Recording stops on release, interruption, tab change, background entry, or the duration limit. Returning to the app does not restart recording.
 - [ ] Read-aloud works after recording, including Bluetooth/audio-route checks on a real iPhone.
@@ -122,3 +122,22 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] Ask “最近三天血糖” / “past 3 days glucose”. Compare window bounds, coverage, extrema and observed daily means with the source. Overlapping Health/Nightscout bins count once and prefer direct Nightscout.
 - [ ] Disable a source or interrupt sync: missing data remains missing, source errors are visible, and cached/partial history is not called current CGM or complete coverage. Do not interpret bin percentages as clinical time-in-range.
 - [ ] Update an existing installation in place; old conversation records decode with absent new fact/freshness log fields.
+
+## Native Gemma audio input
+
+- [ ] With the model installed but unloaded, hold/release to record; Gemma loads automatically and understands the recording locally. Verify airplane-mode audio input after installation.
+- [ ] Text-only chat continues to work before and after audio processing. Spoken replies still use the existing system voice.
+- [ ] Permission prompt released before approval must not start capture; hold again afterward. Denied microphone access must leave text input available.
+- [ ] Short taps, 20-second limit, silent input, Cancel audio processing, incoming calls, Bluetooth disconnection, leaving Joe, backgrounding and memory pressure must not send a partial question automatically.
+- [ ] Pending audio blocks Send; cancellation restores input. No late result overwrites a later draft. Temporary JoeVoice WAV files are removed after processing/cancellation; startup removes leftovers from a terminated recording.
+- [ ] Device latency/peak memory and Mandarin accuracy are measured on iPhone 15 Pro, separately from the synthetic Mac smoke report.
+
+## Apple Health steps and heart rate
+
+- [ ] Enable Health collection, allow Steps and Heart Rate reads in iPhone Settings/Health, and ensure visible records exist in the Health app. With no Nightscout/CGM connection, ask today's step count and latest HR in English and Chinese.
+- [ ] `My hr?`, `Latest BPM`, `我的心率`, and `我的步数` select the context tool; a Chinese noun phrase must not be treated as merely sharing an experience.
+- [ ] Today's steps come from a local-midnight-to-query-time HealthKit cumulative statistics query, including source merging; they must not be labeled as the last 30 minutes.
+- [ ] A heart-rate sample older than 15 minutes but within a day is reported with its actual local measurement time and not called live/current. No sample in the window is explicitly unavailable.
+- [ ] Empty per-type reads do not imply denied permission or zero. Separately verify disabled collection, locked-device/query error and no visible records. Allow partial success: steps can succeed while HR fails.
+- [ ] Yesterday/week step totals and other unsupported windows are explicitly unsupported, never substituted with today's total. A generation crossing local midnight or query expiry must not reuse the prior day's total as today.
+- [ ] Existing urgent CGM safety still takes priority over an activity question. No heart-rate diagnosis or treatment advice is generated.

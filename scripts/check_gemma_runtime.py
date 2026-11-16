@@ -18,6 +18,8 @@ parser.add_argument('--runtime-package', type=Path, help='Optional local checkou
 parser.add_argument("--calendar-only", action="store_true", help="Run only the synthetic weekly calendar scenario")
 parser.add_argument("--lifecycle-only", action="store_true", help="Exercise native load, idle unload and reload through the production lifecycle manager")
 parser.add_argument("--time-evidence-only", action="store_true", help="Run synthetic local bolus time and rolling 72-hour history scenarios")
+parser.add_argument("--health-only", action="store_true", help="Synthetic Apple Health steps/HR evidence without CGM")
+parser.add_argument("--audio-file", type=Path, help="Synthetic WAV recording for focused native audio input smoke (never use private audio)")
 args = parser.parse_args()
 model = args.model.resolve(strict=True)
 output = args.output.resolve()
@@ -40,9 +42,12 @@ let package = Package(name: "Smoke", platforms: [.macOS(.v14)], dependencies: [
 ''')
     service = (ROOT / 'ios/JoeMobile/Services/AssistantService.swift').read_text()
     actor = service[service.index('actor GemmaRuntime'):service.index('@MainActor @Observable')]
+    if args.audio_file:
+        # Synthetic fixture diagnostics only; never log microphone input in the app.
+        actor = actor.replace('return try GemmaAudioQuestion.checkedText(response.toString)', 'FileHandle.standardError.write(Data(("SYNTHETIC AUDIO RAW: " + response.toString + "\\n").utf8)); return try GemmaAudioQuestion.checkedText(response.toString)')
     (sources / 'Runtime.swift').write_text('import Foundation\nimport LiteRTLM\nimport JoeCore\n' + actor)
     (sources / 'Smoke.swift').write_text((ROOT / 'scripts/fixtures/GemmaRuntimeSmoke.swift').read_text())
     env = os.environ.copy()
     env.setdefault('DEVELOPER_DIR', '/Applications/Xcode.app/Contents/Developer')
-    subprocess.run(['swift', 'run', '--package-path', str(work), '-c', 'release', 'Smoke', str(model), str(output)] + (["--calendar-only"] if args.calendar_only else []) + (["--lifecycle-only"] if args.lifecycle_only else []) + (["--time-evidence-only"] if args.time_evidence_only else []), env=env, check=True)
+    subprocess.run(['swift', 'run', '--package-path', str(work), '-c', 'release', 'Smoke', str(model), str(output)] + (["--health-only"] if args.health_only else []) + (["--calendar-only"] if args.calendar_only else []) + (["--lifecycle-only"] if args.lifecycle_only else []) + (["--time-evidence-only"] if args.time_evidence_only else []) + (["--audio-file", str(args.audio_file.resolve(strict=True))] if args.audio_file else []), env=env, check=True)
 print(f'Synthetic Mac runtime report: {output}')

@@ -1,0 +1,18 @@
+{
+  "audioQuestion": "When was my last bolus recorded?",
+  "audioQuestionVersion": "joe.audio-question.v1",
+  "runtime": "LiteRT-LM 0.19.1",
+  "scope": "Synthetic speech on Mac CPU; not an iPhone microphone or accuracy benchmark",
+  "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "textReplyAfterAudio": "Hello! How can I help you today?",
+  "input": {
+    "kind": "macOS Samantha synthesized speech, 16 kHz mono signed 16-bit PCM WAV",
+    "spokenText": "When was my last bolus record?"
+  },
+  "coreXCTestCount": 90,
+  "notes": [
+    "Initial audio prompt misrecognized bolus as bonus; adding explicitly conditional domain vocabulary produced the recorded result. One synthetic fixture does not establish word-error rate or medical-term accuracy.",
+    "Voice input uses the native audio encoder, then an editable question draft before existing fact-query/validation. No Apple Speech ASR is used.",
+    "iPhone microphone, route handling, Mandarin accuracy, peak memory and latency remain device acceptance checks."
+  ]
+}

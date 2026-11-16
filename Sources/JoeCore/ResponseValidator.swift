@@ -6,7 +6,7 @@ public struct ResponseValidation: Codable, Sendable, Equatable {
 }
 /// Conservative regression-tested screening, not a proof of clinical correctness.
 public struct ResponseValidator: Sendable {
-    public static let version = "joe.response-validator.v7"
+    public static let version = "joe.response-validator.v8"
     public init() {}
     public func validate(_ text: String, userText: String, decision: SafetyDecision,
                          snapshot: AssistantSnapshot, evidence: Set<ToolKind>) -> ResponseValidation {
@@ -107,7 +107,7 @@ public struct ResponseValidator: Sendable {
         if evidence.contains(.glucose) { timestampTokens += [cgm.sourceLocalTime].compactMap { $0 } }
         if evidence.contains(.insulin) { timestampTokens += [snapshot.recentInsulin.latestBolusLocalTime].compactMap { $0 } }
         if evidence.contains(.forecast) { timestampTokens += [forecast.sourceLocalTime, forecast.generatedLocalTime, forecast.prediction30mLocalTime, forecast.prediction60mLocalTime].compactMap { $0 } }
-        if evidence.contains(.context) { timestampTokens += [snapshot.currentContext.observedLocalTime, snapshot.currentContext.nextEventLocalTime].compactMap { $0 } }
+        if evidence.contains(.context) { timestampTokens += [snapshot.currentContext.observedLocalTime, snapshot.currentContext.nextEventLocalTime, snapshot.currentContext.healthActivity?.windowStartLocal, snapshot.currentContext.healthActivity?.windowEndLocal, snapshot.currentContext.healthActivity?.heartRateMeasuredLocal].compactMap { $0 } }
         if evidence.contains(.history), let h = snapshot.glucoseHistory { timestampTokens += [h.windowStartLocal, h.windowEndLocal, h.latestLocalTime, h.minimumLocalTime, h.maximumLocalTime] + h.daily.map(\.localDate) }
         var numericText = lower
         for token in timestampTokens.sorted(by: { $0.count > $1.count }) { numericText = numericText.replacingOccurrences(of: token.lowercased(), with: " ") }
@@ -116,6 +116,17 @@ public struct ResponseValidator: Sendable {
         let asksWhen = ["when", "what time", "什么时候", "几点", "何时"].contains(where: userText.lowercased().contains)
         if asksWhen, evidence.contains(.insulin), let time = snapshot.recentInsulin.latestBolusLocalTime, !lower.contains(time.lowercased()) { reasons.append("event_time_omitted") }
         if asksWhen, evidence.contains(.glucose), !evidence.contains(.forecast), !evidence.contains(.insulin), let time = cgm.sourceLocalTime, !lower.contains(time.lowercased()) { reasons.append("event_time_omitted") }
+        if evidence.contains(.context), let h = snapshot.currentContext.healthActivity {
+            let q = HealthActivityQuery(userText)
+            if q.requested && !q.unsupportedWindow {
+                if q.steps, let steps = h.stepsToday, !Self.numbers(numericText).contains(where: { abs($0-steps) <= 0.11 }) { reasons.append("health_steps_omitted") }
+                if q.heartRate, let bpm = h.heartRateBpm {
+                    if !Self.numbers(numericText).contains(where: { abs($0-bpm) <= 0.11 }) { reasons.append("health_heart_rate_omitted") }
+                    if let time = h.heartRateMeasuredLocal, !lower.contains(time.lowercased()) { reasons.append("health_measurement_time_omitted") }
+                    if has(["right now", "live heart rate", "current heart rate is", "实时心率", "现在的心率是"]) { reasons.append("health_record_as_live") }
+                }
+            }
+        }
         let doseRegex = try! NSRegularExpression(pattern: #"([0-9]+(?:\.[0-9]+)?)\s*(?:u\b|units?\b|单位)"#)
         if !evidence.contains(.insulin) && doseRegex.firstMatch(in: numericText, range: NSRange(numericText.startIndex..., in: numericText)) != nil { reasons.append("insulin_without_tool") }
         if evidence.contains(.insulin) {
@@ -145,6 +156,7 @@ public struct ResponseValidator: Sendable {
         if evidence.contains(.context) {
             let c = snapshot.currentContext
             supported += [c.stepsLast30m, c.heartRate, c.sleepHoursLastNight, c.minutesUntilNextEvent.map(Double.init)].compactMap { $0 }
+            supported += [c.healthActivity?.stepsToday, c.healthActivity?.heartRateBpm].compactMap { $0 }
             supported.append(30)
         }
         if numbers.contains(where: { number in !supported.contains(where: { abs($0-number) <= 0.11 }) }) { reasons.append("unsupported_number") }

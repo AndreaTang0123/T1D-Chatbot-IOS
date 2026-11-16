@@ -1,5 +1,4 @@
 import AVFoundation
-import Speech
 import Observation
 import JoeCore
 
@@ -159,25 +158,31 @@ final class SpeechPCMRenderer: @unchecked Sendable {
 }
 
 /// Audio stays local. Authorization, capture, and finalization have separate cancellation guards.
+/// Captures WAV audio only. Speech understanding belongs to Gemma, not Apple Speech.
 @MainActor @Observable final class SpeechInputService {
     private(set) var transcript = ""
     private(set) var isPreparing = false
     private(set) var isRecording = false
     private(set) var isFinishing = false
     private(set) var message: String?
-    @ObservationIgnored private let engine = AVAudioEngine()
-    @ObservationIgnored private var request: SFSpeechAudioBufferRecognitionRequest?
-    @ObservationIgnored private var recognition: SFSpeechRecognitionTask?
-    @ObservationIgnored private var recognizer: SFSpeechRecognizer?
+    @ObservationIgnored private var recorder: AVAudioRecorder?
+    @ObservationIgnored private var file: URL?
     @ObservationIgnored private var gate = VoiceCaptureGate()
     @ObservationIgnored private var sessionID = UUID()
-    @ObservationIgnored private var hasTap = false
-    @ObservationIgnored private var ownsAudioSession = false
     @ObservationIgnored private var permissionTask: Task<Void, Never>?
     @ObservationIgnored private var finishTask: Task<Void, Never>?
     @ObservationIgnored private var limitTask: Task<Void, Never>?
     @ObservationIgnored private var observers: [NSObjectProtocol] = []
+    @ObservationIgnored private var understand: (@MainActor (URL, String) async throws -> String)?
+    @ObservationIgnored private var locale = "en-US"
+    @ObservationIgnored private var ownsAudioSession = false
     init() {
+        // This service is created once before capture; remove leftovers from a terminated process.
+        if let files = try? FileManager.default.contentsOfDirectory(at: FileManager.default.temporaryDirectory, includingPropertiesForKeys: nil) {
+            for url in files where url.lastPathComponent.hasPrefix("JoeVoice-") && url.pathExtension == "wav" {
+                try? FileManager.default.removeItem(at: url)
+            }
+        }
         for name in [AVAudioSession.interruptionNotification, AVAudioSession.routeChangeNotification] {
             observers.append(NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] note in
                 let reason = (note.userInfo?[AVAudioSessionRouteChangeReasonKey] as? NSNumber)?.uintValue
@@ -188,96 +193,86 @@ final class SpeechPCMRenderer: @unchecked Sendable {
                 guard stop else { return }
                 Task { @MainActor in
                     guard let self, self.isRecording || self.isFinishing else { return }
-                    self.message = "Audio was interrupted. Review your text before sending."; self.cancel()
+                    self.cancel(); self.message = "Audio was interrupted. Record again or type your message."
                 }
             })
         }
     }
     deinit { observers.forEach(NotificationCenter.default.removeObserver) }
-    func press(locale: String) {
+    func press(locale: String, understand: @escaping @MainActor (URL, String) async throws -> String) {
         guard !isPreparing, !isRecording, !isFinishing else { return }
         let attempt = gate.begin(); isPreparing = true; message = nil
+        self.locale = locale; self.understand = understand
         permissionTask = Task { [weak self] in
             guard let self else { return }
-            let authorization = await withCheckedContinuation { continuation in
-                SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
-            }
-            guard self.gate.accepts(attempt), !Task.isCancelled else { return }
-            guard authorization == .authorized else {
-                self.message = "Enable Speech Recognition for Joe in iPhone Settings."; self.isPreparing = false; self.gate.cancel(); return
-            }
             let microphone = await AVAudioApplication.requestRecordPermission()
             guard self.gate.accepts(attempt), !Task.isCancelled else { return }
             self.isPreparing = false
             guard microphone else { self.message = "Enable Microphone access for Joe in iPhone Settings."; self.gate.cancel(); return }
-            guard self.gate.mayStart(attempt) else { self.message = "Permissions are ready. Hold the microphone again to talk."; return }
-            self.start(locale: locale)
+            guard self.gate.mayStart(attempt) else { self.message = "Microphone is ready. Hold again to talk."; return }
+            self.start()
         }
     }
-    private func start(locale: String) {
-        guard let local = SFSpeechRecognizer(locale: Locale(identifier: locale)), local.isAvailable, local.supportsOnDeviceRecognition else {
-            message = "On-device recognition is unavailable for the selected language. Change Voice language in Settings or type your message."
-            gate.cancel(); return
-        }
-        let token = UUID(); sessionID = token; transcript = ""; recognizer = local
+    private func start() {
+        let token = UUID(); sessionID = token; transcript = ""
         do {
             let audio = AVAudioSession.sharedInstance()
             try audio.setCategory(.playAndRecord, mode: .measurement, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try audio.setActive(true); ownsAudioSession = true
-            let input = engine.inputNode
-            let format = input.outputFormat(forBus: 0)
-            guard format.sampleRate > 0, format.channelCount > 0 else { message = "No microphone input is available."; cleanup(); return }
-            let buffer = SFSpeechAudioBufferRecognitionRequest()
-            buffer.requiresOnDeviceRecognition = true; buffer.shouldReportPartialResults = true
-            buffer.contextualStrings = ["Nightscout", "glucose", "insulin", "bolus", "Joe"]
-            request = buffer
-            input.installTap(onBus: 0, bufferSize: 1024, format: format) { pcm, _ in buffer.append(pcm) }; hasTap = true
-            recognition = local.recognitionTask(with: buffer) { [weak self] result, error in
-                let text = result?.bestTranscription.formattedString
-                let final = result?.isFinal ?? false
-                let failed = error != nil
-                Task { @MainActor in
-                    guard let self, self.sessionID == token else { return }
-                    if let text { self.transcript = text }
-                    if final || failed {
-                        if failed && self.transcript.isEmpty { self.message = "No transcription was returned. Check your selected voice language and try again." }
-                        self.cleanup()
-                    }
-                }
-            }
-            engine.prepare(); try engine.start(); isRecording = true
+            let url = FileManager.default.temporaryDirectory.appendingPathComponent("JoeVoice-\(UUID().uuidString).wav")
+            file = url
+            let recording = try AVAudioRecorder(url: url, settings: [
+                AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: 16000.0,
+                AVNumberOfChannelsKey: 1, AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMIsFloatKey: false, AVLinearPCMIsBigEndianKey: false
+            ])
+            recorder = recording
+            guard recording.prepareToRecord(), recording.record() else { throw GemmaAudioError.unavailable }
+            isRecording = true
             limitTask = Task { [weak self] in
-                try? await Task.sleep(for: .seconds(55))
+                try? await Task.sleep(for: .seconds(GemmaAudioQuestion.maximumSeconds))
                 guard !Task.isCancelled, let self, self.sessionID == token else { return }
-                self.message = "Recording limit reached. Review your message before sending."; self.release()
+                self.message = "20-second limit reached. Gemma will process this recording."; self.release()
             }
-        } catch { message = "The microphone could not start. Check your audio route and try again."; cleanup() }
+        } catch { cancel(); message = "The microphone could not start. Check your audio route or type your message." }
     }
     func release() {
         gate.release()
-        guard isRecording else { return }
-        stopCapture(); request?.endAudio(); isRecording = false; isFinishing = true
-        let token = sessionID
-        // Do not cancel recognition immediately after ending the audio; await the final result.
+        guard isRecording, let url = file, let understand else { return }
+        let duration = recorder?.currentTime ?? 0
+        recorder?.stop(); recorder = nil; file = nil
+        limitTask?.cancel(); limitTask = nil
+        deactivateAudio()
+        isRecording = false
+        guard duration >= 0.3 else { try? FileManager.default.removeItem(at: url); message = "Recording was too short. Hold to talk again."; return }
+        isFinishing = true
+        let token = sessionID; let language = locale
         finishTask = Task { [weak self] in
-            try? await Task.sleep(for: .seconds(5))
-            guard !Task.isCancelled, let self, self.sessionID == token else { return }
-            if self.transcript.isEmpty { self.message = "No speech detected. Try again or type your message." }
-            self.cleanup()
+            // Keep the file alive until native inference/cancellation has finished consuming it.
+            defer { try? FileManager.default.removeItem(at: url) }
+            do {
+                let text = try await understand(url, language)
+                try Task.checkCancellation()
+                guard let self, self.sessionID == token else { return }
+                self.transcript = text; self.message = "Gemma understood your recording. Check numbers and dates, then send."
+            } catch {
+                guard let self, self.sessionID == token, !Task.isCancelled else { return }
+                self.message = (error as? GemmaAudioError)?.errorDescription ?? "Gemma could not process this recording. Try again or type your message."
+            }
+            guard let self, self.sessionID == token else { return }
+            self.isFinishing = false; self.finishTask = nil; self.understand = nil
         }
     }
     func cancel() {
-        gate.cancel(); permissionTask?.cancel(); permissionTask = nil; isPreparing = false; cleanup()
-    }
-    private func stopCapture() {
-        if engine.isRunning { engine.stop() }
-        if hasTap { engine.inputNode.removeTap(onBus: 0); hasTap = false }
-    }
-    private func cleanup() {
-        sessionID = UUID(); gate.cancel(); stopCapture()
-        request?.endAudio(); recognition?.cancel(); recognition = nil; request = nil; recognizer = nil
+        sessionID = UUID(); gate.cancel()
+        permissionTask?.cancel(); permissionTask = nil
         finishTask?.cancel(); finishTask = nil; limitTask?.cancel(); limitTask = nil
-        isRecording = false; isFinishing = false
+        recorder?.stop(); recorder = nil
+        if let file { try? FileManager.default.removeItem(at: file) }; file = nil
+        isPreparing = false; isRecording = false; isFinishing = false; understand = nil
+        deactivateAudio()
+    }
+    private func deactivateAudio() {
         if ownsAudioSession {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             ownsAudioSession = false

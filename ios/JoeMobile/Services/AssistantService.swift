@@ -8,12 +8,13 @@ actor GemmaRuntime {
     private var engine: Engine?
     private var conversation: Conversation?
     private var epoch = 0
+    private var isGenerating = false
     func load(modelURL: URL, cacheURL: URL) async throws {
         guard engine == nil else { return }
         let ticket = epoch
         try FileManager.default.createDirectory(at: cacheURL, withIntermediateDirectories: true)
         let config = try EngineConfig(modelPath: modelURL.path, backend: .cpu(threadCount: 4),
-                                      maxNumTokens: 4096, cacheDir: cacheURL.path)
+                                      audioBackend: .cpu(threadCount: 2), maxNumTokens: 4096, cacheDir: cacheURL.path)
         let candidate = Engine(engineConfig: config)
         try await candidate.initialize()
         try Task.checkCancellation()
@@ -23,6 +24,9 @@ actor GemmaRuntime {
     func generate(prompt: String, maxOutputTokens: Int = 220) async throws -> String {
         try Task.checkCancellation()
         guard let engine else { throw AssistantFailure.assetsUnavailable }
+        guard !isGenerating else { throw AssistantFailure.generationError }
+        isGenerating = true
+        defer { isGenerating = false }
         let sampler = try SamplerConfig(topK: 40, topP: 0.9, temperature: 0.3)
         let config = ConversationConfig(systemMessage: Message(JoeInstructions.combined + "\n\n" + GemmaPromptBuilder.adapterInstructions, role: .system),
             samplerConfig: sampler, thinkingConfig: ThinkingConfig(enableThinking: false), automaticToolCalling: false)
@@ -35,6 +39,27 @@ actor GemmaRuntime {
                                                              thinkingConfig: ThinkingConfig(enableThinking: false))
             try Task.checkCancellation()
             return response.toString.trimmingCharacters(in: .whitespacesAndNewlines)
+        } onCancel: { try? conversation.cancel() }
+    }
+    func understandAudio(file: URL, locale: String) async throws -> String {
+        try Task.checkCancellation()
+        guard let engine else { throw AssistantFailure.assetsUnavailable }
+        guard !isGenerating else { throw AssistantFailure.generationError }
+        isGenerating = true
+        defer { isGenerating = false }
+        let config = ConversationConfig(systemMessage: Message(GemmaAudioQuestion.instructions, role: .system),
+            samplerConfig: try SamplerConfig(topK: 1, topP: 1, temperature: 0),
+            thinkingConfig: ThinkingConfig(enableThinking: false), automaticToolCalling: false)
+        let conversation = try await engine.createConversation(with: config)
+        self.conversation = conversation
+        defer { self.conversation = nil }
+        return try await withTaskCancellationHandler {
+            try Task.checkCancellation()
+            let response = try await conversation.sendMessage(Message(contents: [
+                .audioFile(file.path), .text(GemmaAudioQuestion.prompt(locale: locale))
+            ]), maxOutputTokens: 384, thinkingConfig: ThinkingConfig(enableThinking: false))
+            try Task.checkCancellation()
+            return try GemmaAudioQuestion.checkedText(response.toString)
         } onCancel: { try? conversation.cancel() }
     }
     func unload() { epoch += 1; try? conversation?.cancel(); engine = nil }
@@ -109,6 +134,16 @@ actor GemmaRuntime {
         preparationGeneration = UUID()
         inferenceTask?.cancel()
         await lifecycle.release()
+    }
+    func understandAudio(file: URL, locale: String) async throws -> String {
+        guard await prepareForTurn() else { throw GemmaAudioError.unavailable }
+        defer { finishTurn() }
+        try Task.checkCancellation()
+        let runtime = self.runtime
+        let task = Task { try await runtime.understandAudio(file: file, locale: locale) }
+        inferenceTask = task
+        defer { inferenceTask = nil }
+        return try await withTaskCancellationHandler { try await task.value } onCancel: { task.cancel() }
     }
     func respond(to request: AssistantModelRequest) async throws -> ModelReply {
         guard !isBackground, !Task.isCancelled else { throw AssistantFailure.cancelled }

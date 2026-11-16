@@ -14,7 +14,7 @@ public enum AssistantReplyPresentation {
         let today = formatter.string(from: now)
         let yesterday = formatter.string(from: calendar.date(byAdding: .day, value: -1, to: now)!)
         // Strip only the timestamp annotation emitted by LocalEventTime, not event-title parentheses.
-        let pattern = #"\b(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?(?: \([^()\n]+, UTC[+-]\d{2}:\d{2}\))?"#
+        let pattern = #"(?<![0-9])(\d{4}-\d{2}-\d{2})(?: (\d{2}:\d{2}))?(?: \([^()\n]+, UTC[+-]\d{2}:\d{2}\))?"#
         guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
         var result = text
         for match in regex.matches(in: text, range: NSRange(text.startIndex..., in: text)).reversed() {

@@ -17,7 +17,10 @@ public struct ReplyFreshnessReview: Sendable {
         if evidence.contains(.forecast), facts.forecastResult.available, !current.forecastResult.available {
             return Self(decision: decision, requiredResponse: fallback.generalResponse(userText: question, snapshot: current), reasons: ["forecast_expired_during_generation"])
         }
-        if evidence.contains(.context), facts.calendarDay == nil, facts.currentContext.freshness == .fresh, current.currentContext.freshness != .fresh {
+        if evidence.contains(.context), HealthActivityQuery(question).requested, facts.currentContext.healthActivity != nil, current.currentContext.healthActivity == nil {
+            return Self(decision: decision, requiredResponse: fallback.generalResponse(userText: question, snapshot: current), reasons: ["context_expired_during_generation"])
+        }
+        if evidence.contains(.context), !HealthActivityQuery(question).requested, facts.calendarDay == nil, facts.currentContext.freshness == .fresh, current.currentContext.freshness != .fresh {
             return Self(decision: decision, requiredResponse: fallback.generalResponse(userText: question, snapshot: current), reasons: ["context_expired_during_generation"])
         }
         return Self(decision: decision, requiredResponse: nil, reasons: [])

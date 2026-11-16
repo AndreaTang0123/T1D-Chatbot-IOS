@@ -13,7 +13,7 @@ Implementation began in a standalone repository containing only a README and imp
 | Features | UTC five-minute buckets, causal CGM grid, separate missingness flags, and Python/Swift fixtures |
 | Forecast | Core ML CPU inference at 30/60 minutes; manifest/input/output validation; stops when model, history, or fresh CGM is unavailable |
 | Evaluation | Forecast logs, subsequent ±150-second CGM matching, errors, MAE display, and export |
-| Assistant / TTS | Gemma 4 E2B installation and LiteRT-LM availability handling, four read-only tools, Joe persona in session instructions, bounded multi-turn natural conversation, deterministic fallback, text input, English/Mandarin speech voices, and hold-to-talk on-device transcription with editable drafts |
+| Assistant / TTS | Gemma 4 E2B installation and LiteRT-LM availability handling, four read-only tools, Joe persona in session instructions, bounded multi-turn natural conversation, deterministic fallback, text input, English/Mandarin speech voices, and hold-to-talk native Gemma audio input with editable drafts (Apple Speech ASR removed) |
 | Training | Coverage report, chronological 70/15/15 split with boundary purging, A–D Ridge experiments, persistence, Random Forest comparison, Core ML export, and numerical fixtures |
 | Background | Foreground, manual, BGAppRefresh, and HealthKit observer updates; cold-start initialization; no fixed refresh guarantee |
 
@@ -93,3 +93,15 @@ Eligible chat requests and synthetic regression wait for installed-file verifica
 ## Time evidence and 72-hour history
 
 Facts are validated against the provider's executed immutable snapshot; post-generation safety/freshness has a separate gate and log reasons. Absolute event timestamps include the device timezone and UTC offset. Minute-boundary, wrong-dose, wrong-time, DST and old-log-decoding regressions pass. Explicit three-day queries refresh Nightscout entries over the last 72 hours, combine visible Health history without duplicate-bin inflation, and expose coverage plus observed local-day summaries. No real credentials or health records were accessed during implementation checks.
+
+## Native Gemma audio input (November 16)
+
+Apple Speech input is replaced with microphone-only PCM WAV recording and Gemma's native audio encoder via LiteRT-LM 0.19.1. English/Mandarin language hints and a conditional domain vocabulary prompt produce an editable question before the existing grounded-answer pipeline. Text input and system TTS remain. Capture is bounded to 20 seconds; temporary audio is removed after processing/cancellation and stale capture files on startup. Model load/unload protection covers the audio pass, and concurrent native generations are rejected.
+
+All 90 core tests pass. Unsigned iOS build and an actual pinned-model Mac CPU audio→draft→text-chat smoke pass; see [synthetic audio report](reports/gemma-native-audio-smoke.v1.json). Initial synthetic bolus/bonus confusion informed a domain-vocabulary prompt fix; real iPhone audio accuracy and performance remain unverified. See [customization file map](MODEL_CUSTOMIZATION.md) and [device tests](DEVICE_TESTS.md).
+
+## Apple Health activity chat queries
+
+Added independently refreshed, structured HealthKit activity evidence for today's local cumulative step count and the latest recorded HR sample within a day. This does not change causal 30-minute forecast features. English `hr`/`bpm`/`pulse`, step-count phrasing and Chinese noun-phrase questions select the context tool. Empty reads, query failure, collection off and unavailable devices have distinct statuses; iOS read authorization is not inferred. Model replies must include requested available values and the actual HR measurement time; old samples cannot be described as live. Other requested activity time windows are explicitly unsupported. Query evidence expires after 15 minutes or at local midnight; urgent CGM safety still takes priority.
+
+All 96 core tests and the unsigned iPhone build pass. Real Gemma Mac CPU generation is checked with synthetic step/HR values, not private HealthKit records. Actual phone permission grants, Watch synchronization, source merging and locked-device behavior remain device acceptance checks.

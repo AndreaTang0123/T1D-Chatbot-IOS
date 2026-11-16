@@ -1,0 +1,125 @@
+{
+  "scope": "Pinned Gemma Mac CPU with synthetic Apple Health activity evidence and no CGM; no private HealthKit data read",
+  "coreXCTestCount": 96,
+  "unsignedIOSBuild": "passed",
+  "turns": [
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T19:09:14Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v13; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T19:09:21Z",
+      "freshnessReasons": [],
+      "id": "C6283AB3-C5D1-4322-9578-1D4A7CF8D8C3",
+      "latencyMilliseconds": 6659.158792,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v4",
+        "persona": "joe.persona.v5",
+        "safety": "joe.safety.v3"
+      },
+      "question": "How many steps have I taken today?",
+      "regressionCaseID": "synthetic-health-0",
+      "response": "You have taken 4321 steps today.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T19:09:14Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v8"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T19:09:14Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v13; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T19:09:18Z",
+      "freshnessReasons": [],
+      "id": "68236D6C-34DA-4D59-BBE2-DE88578E828B",
+      "latencyMilliseconds": 3835.0275,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v4",
+        "persona": "joe.persona.v5",
+        "safety": "joe.safety.v3"
+      },
+      "question": "What is my latest hr?",
+      "regressionCaseID": "synthetic-health-1",
+      "response": "Your latest recorded heart rate was 72 bpm at today 12:09.",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T19:09:14Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v8"
+    },
+    {
+      "allowedTools": [
+        "context"
+      ],
+      "availability": "available",
+      "decision": {
+        "noData": {}
+      },
+      "factSnapshotTime": "2026-11-16T19:09:14Z",
+      "foundationModelVersion": "Mac synthetic smoke; gemma-4-E2B-it; 3d48132a00cf76de57d926de30f5c5c5ed9b8c0d; 181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c; joe.gemma-adapter.v13; LiteRT-LM 0.19.1; CPU/4threads/context4096; Version 26.6.2 (Build 25G83)",
+      "freshnessCheckTime": "2026-11-16T19:09:18Z",
+      "freshnessReasons": [],
+      "id": "FB21F6F4-047B-4EFD-AC1F-A6EDE56DA2DD",
+      "latencyMilliseconds": 3954.710625,
+      "mode": "Gemma 4 E2B · Validated",
+      "prompts": {
+        "explanation": "joe.explanation.v4",
+        "persona": "joe.persona.v5",
+        "safety": "joe.safety.v3"
+      },
+      "question": "我的心率是多少？",
+      "regressionCaseID": "synthetic-health-2",
+      "response": "最近一次心率是72 bpm，测量时间是今天 12:09。",
+      "safetyPolicy": {
+        "cgmStaleSeconds": 900,
+        "contextStaleSeconds": 900,
+        "highGlucose": 250,
+        "lowGlucose": 70,
+        "pumpStaleSeconds": 21600
+      },
+      "safetyPolicyVersion": "joe.safety-policy.v1",
+      "timestamp": "2026-11-16T19:09:14Z",
+      "usedTools": [
+        "context"
+      ],
+      "validationReasons": [],
+      "validatorVersion": "joe.response-validator.v8"
+    }
+  ],
+  "notes": [
+    "Real iPhone HealthKit permissions, query failures, Watch sync, source merging, latency and accuracy require device acceptance checks.",
+    "Supported activity windows are today for recorded steps and latest HR within a day; other requested ranges are not silently substituted."
+  ]
+}
