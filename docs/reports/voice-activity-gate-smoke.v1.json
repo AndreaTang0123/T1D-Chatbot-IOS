@@ -1,0 +1,17 @@
+{
+  "scope": "Core regression and actual production PCM16 WAV decoding with synthetic signals only",
+  "coreXCTestCount": 115,
+  "unsignedIOSBuild": "passed",
+  "gateCases": {
+    "silence": "rejected",
+    "stationaryHum": "rejected",
+    "isolatedClick": "rejected",
+    "modulatedActivity": "accepted",
+    "synthesizedSpokenBolusQuestion": "accepted"
+  },
+  "limitations": [
+    "Conservative energy/activity heuristic, not learned VAD or speaker identification.",
+    "Quiet speech may be rejected; loud/modulated noise or background speech may pass.",
+    "iPhone microphone routes and thresholds require manual acceptance testing."
+  ]
+}

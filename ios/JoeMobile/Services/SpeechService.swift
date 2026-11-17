@@ -256,7 +256,12 @@ final class SpeechPCMRenderer: @unchecked Sendable {
             // Keep the file alive until native inference/cancellation has finished consuming it.
             defer { try? FileManager.default.removeItem(at: url) }
             do {
-                let text = try await understand(url, language)
+                let active = try await Task.detached(priority: .userInitiated) {
+                    try RecordedAudioActivity.hasSpeechLikeActivity(file: url)
+                }.value
+                try Task.checkCancellation()
+                guard active else { throw GemmaAudioError.noSpeech }
+                let text = try GemmaAudioQuestion.checkedText(await understand(url, language))
                 try Task.checkCancellation()
                 guard let self, self.sessionID == token else { return }
                 self.transcript = text; self.message = nil
@@ -289,5 +294,29 @@ final class SpeechPCMRenderer: @unchecked Sendable {
             try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
             ownsAudioSession = false
         }
+    }
+}
+
+/// Decode the completed WAV off the main actor before any model loading/inference.
+enum RecordedAudioActivity {
+    static func hasSpeechLikeActivity(file url: URL) throws -> Bool {
+        let file = try AVAudioFile(forReading: url, commonFormat: .pcmFormatFloat32, interleaved: false)
+        let format = file.processingFormat
+        guard format.sampleRate > 0, format.channelCount == 1 else { return false }
+        let frameCount = AVAudioFrameCount(max(1, Int(format.sampleRate * 0.02)))
+        guard let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frameCount) else { return false }
+        var activity = VoiceActivityGate()
+        while file.framePosition < file.length {
+            try file.read(into: buffer, frameCount: frameCount)
+            let count = Int(buffer.frameLength)
+            guard count > 0, let samples = buffer.floatChannelData?[0] else { break }
+            var squares: Double = 0; var peak: Double = 0
+            for i in 0..<count {
+                let value = Double(samples[i])
+                squares += value * value; peak = max(peak, abs(value))
+            }
+            activity.observe(rms: sqrt(squares / Double(count)), peak: peak, seconds: Double(count) / format.sampleRate)
+        }
+        return activity.hasSpeechLikeActivity
     }
 }

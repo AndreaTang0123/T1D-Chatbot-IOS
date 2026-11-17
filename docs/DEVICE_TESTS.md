@@ -160,3 +160,17 @@ These device tests remain pending. Source checks do not count as successful devi
 - [ ] A short tap below the recording minimum creates no pending bubble. After permission approval following release, hold again to start capture.
 - [ ] Typed text already in the composer is retained separately, never appended to spoken words. Text Send remains available after voice completion/failure/cancellation, subject to the ordinary answer-in-progress guard.
 - [ ] Observe model loading text while unloaded. After successful ASR, release its lifecycle use before answering; automatic read-aloud must not cancel the just-completed ASR turn or start a duplicate answer.
+
+## ASR instruction echo regression
+
+- [ ] A valid recording shows only spoken words in its bubble. Internal instructions such as “Write the spoken words…” must never become a user question or Joe input.
+- [ ] [NO_SPEECH], marker-plus-punctuation and instruction-plus-marker results produce a failed bubble with no automatic answer. Re-record or type afterward.
+- [ ] Verify English and Mandarin, silence, low input volume and domain terms on iPhone. A synthesized Mac clip is not a microphone or word-error-rate benchmark.
+- [ ] Previous contaminated bubbles may remain visible, but their instruction/sentinel text must be absent from replayed model conversation.
+
+## Pre-ASR activity screening
+
+- [ ] Hold/release without speaking for 1, 5 and 20 seconds: the pending voice message must fail with “No clear speech”, without loading/calling Gemma or creating a Joe answer.
+- [ ] Test quiet room tone, steady fan/hum and an isolated tap/click. These should not submit a generated question.
+- [ ] Normal English/Mandarin speech passes and auto-sends once; test quiet speech, short questions, distance, Bluetooth mic and noisy surroundings for false rejection. This heuristic does not identify the user or distinguish TV/background speech.
+- [ ] Cancel or leave the app during WAV inspection: no late callback starts model inference, and the temporary WAV is removed after the inspection completes.

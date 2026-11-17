@@ -11,6 +11,18 @@ final class GemmaAudioQuestionTests: XCTestCase {
             XCTAssertThrowsError(try GemmaAudioQuestion.checkedText(output))
         }
     }
+    func testInstructionEchoNeverBecomesAnAutomaticQuestion() {
+        let reported = "Write the spoken words from this recording expected language English preserve any other language actually spoken return only the transcript or [NO_SPEECH]"
+        for text in [reported, "What's my glucose? " + reported, GemmaAudioQuestion.prompt(locale: "en-US"), "WRITE THE SPOKEN WORDS FROM THIS RECORDING."] {
+            XCTAssertThrowsError(try GemmaAudioQuestion.checkedText(text))
+        }
+    }
+    func testNoSpeechWithPunctuationOrOtherTextIsRejected() throws {
+        for text in ["[NO_SPEECH].", "[no_speech]", "Transcript: [NO_SPEECH]", "Hello [NO_SPEECH]", "[ NO SPEECH ]", "NO_SPEECH"] {
+            XCTAssertThrowsError(try GemmaAudioQuestion.checkedText(text))
+        }
+        XCTAssertEqual(try GemmaAudioQuestion.checkedText("I have no speech appointment today."), "I have no speech appointment today.")
+    }
     func testAudioTaskRemainsSeparateFromJoeAnsweringInstructions() {
         XCTAssertTrue(GemmaAudioQuestion.instructions.contains("Do not answer"))
         XCTAssertTrue(GemmaAudioQuestion.prompt(locale: "zh-CN").contains("Mandarin Chinese"))

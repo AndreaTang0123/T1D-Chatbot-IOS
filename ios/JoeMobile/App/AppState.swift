@@ -250,7 +250,7 @@ struct ChatMessage: Identifiable {
         let modelUse = needsModel ? await assistant.prepareForTurn() : false
         defer { if modelUse { assistant.finishTurn() } }
         let snapshot = assistantSnapshot(at: Date(), historyWindow: GlucoseHistorySummary.requestedDays(question, defaultDays: historyDays))
-        let history = messages.filter { $0.voiceDelivery == nil || $0.voiceDelivery?.recognizedText != nil }.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
+        let history = messages.filter { ($0.voiceDelivery == nil || $0.voiceDelivery?.recognizedText != nil) && !GemmaAudioQuestion.isPromptEcho($0.text) && !GemmaAudioQuestion.containsNoSpeechMarker($0.text) }.map { JoeChatTurn(role: $0.role == .user ? "user" : "assistant", content: $0.text) }
         let turn = await coordinator.answer(question, snapshot: snapshot, history: history)
         reply = turn.response; assistantMode = turn.mode
         do { try store.save(assistantTurn: turn) }

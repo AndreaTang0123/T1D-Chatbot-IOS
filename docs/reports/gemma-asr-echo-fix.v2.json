@@ -1,0 +1,16 @@
+{
+  "audioQuestion": "When was my last bolus recorded",
+  "audioQuestionVersion": "joe.audio-question.v2",
+  "runtime": "LiteRT-LM 0.19.1",
+  "scope": "Synthetic speech on Mac CPU; not an iPhone microphone or accuracy benchmark",
+  "sha256": "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c",
+  "textReplyAfterAudio": "Hello! How are you doing today?",
+  "coreXCTestCount": 111,
+  "unsignedIOSBuild": "passed",
+  "notes": [
+    "Audio request now sends the short task text before the audio file, following the Gemma audio example.",
+    "Regression tests reject the reported legacy prompt echo, mixed real words plus instructions, case/punctuation variants and embedded NO_SPEECH markers. Rejected audio results cannot trigger automatic Joe questions.",
+    "This actual-model smoke uses synthesized speech on Mac, not the iPhone microphone. It does not establish recognition accuracy or guarantee every prompt echo is detectable.",
+    "Known contaminated historical bubbles are omitted from model replay, but saved data and UI history are not deleted."
+  ]
+}

@@ -56,7 +56,7 @@ actor GemmaRuntime {
         return try await withTaskCancellationHandler {
             try Task.checkCancellation()
             let response = try await conversation.sendMessage(Message(contents: [
-                .audioFile(file.path), .text(GemmaAudioQuestion.prompt(locale: locale))
+                .text(GemmaAudioQuestion.prompt(locale: locale)), .audioFile(file.path)
             ]), maxOutputTokens: 384, thinkingConfig: ThinkingConfig(enableThinking: false))
             try Task.checkCancellation()
             return try GemmaAudioQuestion.checkedText(response.toString)
