@@ -17,6 +17,13 @@ public struct ExplanationFallback: Sendable {
             switch decision {
             case .urgentLow, .urgentHigh, .forecastRisk: break
             default:
+                if HealthActivityQuery(userText).latestWorkout {
+                    return generalResponse(userText: userText, snapshot: snapshot)
+                }
+                if HealthActivityQuery(userText).weekly, let health = snapshot.currentContext.healthActivity,
+                   let week = health.weeklyHistory, !week.hasVisibleRecords {
+                    return health.response(question: userText, language: ReplyLanguage(text: userText))
+                }
                 if snapshot.currentContext.healthActivity == nil || HealthActivityQuery(userText).unsupportedWindow { return generalResponse(userText: userText, snapshot: snapshot) }
                 return nil
             }

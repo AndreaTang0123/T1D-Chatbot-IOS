@@ -19,7 +19,8 @@ public struct ResponseValidator: Sendable {
         if ReplyLanguage(text: text) != language { reasons.append("language_mismatch") }
         let endings = (try? NSRegularExpression(pattern: "[.!?。！？]+(?:\\s|$)").numberOfMatches(in: text, range: NSRange(text.startIndex..., in: text))) ?? 0
         let dayQuery = intent.calendar && !intent.glucose && !intent.forecast && !intent.insulin && !intent.dose && snapshot.calendarDay != nil
-        if !dayQuery && !evidence.contains(.history) && (endings > 2 || text.count > (language == .chinese ? 260 : 650)) { reasons.append("not_brief") }
+        let weeklyQuery = HealthActivityQuery(userText).weekly && snapshot.currentContext.healthActivity?.weeklyHistory != nil
+        if !dayQuery && !weeklyQuery && !evidence.contains(.history) && (endings > 2 || text.count > (language == .chinese ? 260 : 650)) { reasons.append("not_brief") }
         if text.contains("**") || text.contains("```") || text.unicodeScalars.contains(where: { $0.properties.isEmojiPresentation }) { reasons.append("format_mismatch") }
         if matches("\\b(take|inject|give|administer|increase|decrease|adjust|set|deliver|use|add|reduce|consider|try)\\b.{0,55}\\b(insulin|units?|bolus|basal|pump|u)\\b") ||
             matches("(\u{5efa}\u{8bae}|\u{5e94}\u{8be5}|\u{9700}\u{8981}|\u{53ef}\u{4ee5}|\u{8bf7}|\u{8bd5}\u{8bd5}).{0,20}(\u{6ce8}\u{5c04}|\u{6253}|\u{589e}\u{52a0}|\u{51cf}\u{5c11}|\u{8c03}\u{6574}|\u{80f0}\u{5c9b}\u{7d20}|\u{57fa}\u{7840}\u{7387}|\u{6cf5})") ||
@@ -114,6 +115,7 @@ public struct ResponseValidator: Sendable {
         if evidence.contains(.forecast) { timestampTokens += [forecast.sourceLocalTime, forecast.generatedLocalTime, forecast.prediction30mLocalTime, forecast.prediction60mLocalTime].compactMap { $0 } }
         if evidence.contains(.context) { timestampTokens += [snapshot.currentContext.observedLocalTime, snapshot.currentContext.nextEventLocalTime, snapshot.currentContext.healthActivity?.windowStartLocal, snapshot.currentContext.healthActivity?.windowEndLocal, snapshot.currentContext.healthActivity?.heartRateMeasuredLocal].compactMap { $0 } }
         if evidence.contains(.history), let h = snapshot.glucoseHistory { timestampTokens += [h.windowStartLocal, h.windowEndLocal, h.latestLocalTime, h.minimumLocalTime, h.maximumLocalTime] + h.daily.map(\.localDate) }
+        if evidence.contains(.context), let week = snapshot.currentContext.healthActivity?.weeklyHistory { timestampTokens += [week.startLocal, week.endLocal] + week.days.map(\.date) + [week.latestWorkout?.startLocal, week.latestWorkout?.endLocal].compactMap { $0 } }
         var numericText = lower
         for token in timestampTokens.sorted(by: { $0.count > $1.count }) { numericText = numericText.replacingOccurrences(of: token.lowercased(), with: " ") }
         if !dayQuery && numericText.range(of: #"\b\d+:\d+(?::\d+)?\b|\b\d{4}-\d{2}-\d{2}\b"#, options: .regularExpression) != nil { reasons.append("unsupported_event_time") }
@@ -123,7 +125,14 @@ public struct ResponseValidator: Sendable {
         if asksWhen, evidence.contains(.glucose), !evidence.contains(.forecast), !evidence.contains(.insulin), let time = cgm.sourceLocalTime, !lower.contains(time.lowercased()) { reasons.append("event_time_omitted") }
         if evidence.contains(.context), let h = snapshot.currentContext.healthActivity {
             let q = HealthActivityQuery(userText)
-            if q.requested && !q.unsupportedWindow {
+            if q.weekly, let week = h.weeklyHistory {
+                let visible = week.days.filter { $0.steps != nil || $0.workoutMinutes != nil }
+                if !visible.isEmpty && !visible.contains(where: { day in
+                    lower.contains(day.date) && [day.steps, day.workoutMinutes].compactMap { $0 }.contains(where: { value in Self.numbers(numericText).contains(where: { abs($0-value) <= 1 }) })
+                }) { reasons.append("weekly_activity_evidence_omitted") }
+                if !visible.isEmpty && has(["no tool results", "do not have access", "don't have access", "无法访问", "没有权限"]) { reasons.append("weekly_activity_false_unavailable") }
+            }
+            if q.requested && !q.unsupportedWindow && !q.weekly {
                 if q.steps, let steps = h.stepsToday, !Self.numbers(numericText).contains(where: { abs($0-steps) <= 0.11 }) { reasons.append("health_steps_omitted") }
                 if q.heartRate, let bpm = h.heartRateBpm {
                     if !Self.numbers(numericText).contains(where: { abs($0-bpm) <= 0.11 }) { reasons.append("health_heart_rate_omitted") }
@@ -162,6 +171,7 @@ public struct ResponseValidator: Sendable {
             let c = snapshot.currentContext
             supported += [c.stepsLast30m, c.heartRate, c.sleepHoursLastNight, c.minutesUntilNextEvent.map(Double.init)].compactMap { $0 }
             supported += [c.healthActivity?.stepsToday, c.healthActivity?.heartRateBpm].compactMap { $0 }
+            if let week = c.healthActivity?.weeklyHistory { supported += week.days.flatMap { [$0.steps, $0.workoutMinutes.map { Double(Int($0)) }].compactMap { $0 } }; supported += [(week.latestWorkout?.durationMinutes).map { Double(Int($0)) }].compactMap { $0 }; supported.append(7) }
             supported.append(30)
         }
         if numbers.contains(where: { number in !supported.contains(where: { abs($0-number) <= 0.11 }) }) { reasons.append("unsupported_number") }

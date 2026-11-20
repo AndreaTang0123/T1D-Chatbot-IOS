@@ -236,6 +236,7 @@ struct ChatMessage: Identifiable {
         }
         if intent.context && !intent.sharingExperience {
             healthActivity = await health.activity(at: Date())
+            if HealthActivityQuery(question).weekly { healthActivity?.weeklyHistory = await health.weeklyActivity(at: Date()) }
             // Refresh local permission-gated sources independently of Nightscout synchronization.
             location.refresh()
             let now = Date()

@@ -334,6 +334,9 @@ struct DataAccessSettingsView: View {
     @State private var status: String?
     @State private var place = "home"
     @AppStorage("healthEnabled") private var healthCollection = false
+    @AppStorage("selectedCalendarIDs") private var selectedCalendarIDs = ""
+    @State private var activityDiagnostics: String?
+    @State private var checkingActivity = false
     @AppStorage("calendarEnabled") private var calendarCollection = false
     @AppStorage("locationEnabled") private var locationCollection = false
     @AppStorage("backgroundLocationEnabled") private var backgroundLocationCollection = false
@@ -353,6 +356,16 @@ struct DataAccessSettingsView: View {
                         } else { state.health.disable(); Task { await state.refresh() } }
                     })).disabled(requestingHealth)
                     if requestingHealth { ProgressView("Requesting Health access…") }
+                    Button("Check activity records (past 7 days)") {
+                        checkingActivity = true
+                        Task { @MainActor in
+                            defer { checkingActivity = false }
+                            activityDiagnostics = await state.health.weeklyActivity(at: Date()).response(language: .english)
+                        }
+                    }.disabled(checkingActivity)
+                    if checkingActivity { ProgressView("Reading activity records…") }
+                    if let activityDiagnostics { Text(activityDiagnostics).font(.caption).textSelection(.enabled) }
+                    Text("Activity logs use Apple Health steps and workouts. Allow both Steps and Workouts in Health → profile → Apps → Joe. Records must be synced into Apple Health on this iPhone.").font(.caption).foregroundStyle(.secondary)
                     LabeledContent("Steps in the last 30 min", value: state.context?.steps.map { String(Int($0)) } ?? "Missing")
                     LabeledContent("Heart rate", value: state.context?.heartRate.map { "\(Int($0)) bpm" } ?? "Missing")
                     LabeledContent("Most recent sleep", value: state.context?.sleepHours.map { String(format: "%.1f hours", $0) } ?? "Missing")
@@ -374,9 +387,9 @@ struct DataAccessSettingsView: View {
                     }
                     Text("Percentages describe observed 5-minute bins, not clinical time-in-range. Gaps are excluded, not counted as normal. Reads stay on this device; chat summaries enter local conversation logs and explicit research exports.").font(.caption).foregroundStyle(.secondary)
                 }
-                Section("Calendar · iCloud only") {
-                    Text("Only identifiable iCloud calendars are read; other calendar accounts are excluded. Context uses event categories. Asking Joe about calendar events passes the requested range’s local event titles and times to Gemma on this device. Answers enter recent conversation history, saved chat and research exports. Event notes, attendees and locations are not included.").font(.caption).foregroundStyle(.secondary)
-                    Toggle("Read iCloud calendar events", isOn: Binding(get: { calendarCollection && state.calendar.hasAccess }, set: { enabled in
+                Section("Calendar") {
+                    Text("Select the individual calendars Joe can read below. Context uses event categories. Asking Joe about calendar events passes the requested range’s local event titles and times to Gemma on this device. Answers enter recent conversation history, saved chat and research exports. Event notes, attendees and locations are not included.").font(.caption).foregroundStyle(.secondary)
+                    Toggle("Read calendar events", isOn: Binding(get: { calendarCollection && state.calendar.hasAccess }, set: { enabled in
                         if enabled {
                             requestingCalendar = true
                             Task { @MainActor in
@@ -387,6 +400,21 @@ struct DataAccessSettingsView: View {
                         } else { calendarCollection = false; Task { await state.refresh() } }
                     })).disabled(requestingCalendar)
                     if requestingCalendar { ProgressView("Requesting calendar access…") }
+                    ForEach(state.calendar.availableCalendars) { calendar in
+                        Toggle(isOn: Binding(get: {
+                            _ = selectedCalendarIDs
+                            return state.calendar.isSelected(calendar.id)
+                        }, set: { enabled in
+                            state.calendar.setSelected(calendar.id, enabled: enabled)
+                            selectedCalendarIDs = UserDefaults.standard.string(forKey: "selectedCalendarIDs") ?? ""
+                            Task { await state.refresh() }
+                        })) {
+                            VStack(alignment: .leading) {
+                                Text(calendar.title)
+                                Text(calendar.account).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                    }
                     Text(state.calendar.sourceStatus).font(.caption).foregroundStyle(.secondary)
                     LabeledContent("Current", value: state.context?.calendar ?? "No visible events / Access unavailable")
                     LabeledContent("Next event", value: state.calendarSnapshot.next ?? "No visible events")

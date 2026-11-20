@@ -110,6 +110,67 @@ import JoeCore
         return HealthActivityResult(queriedAt: now, dayStart: start, stepsStatus: stepsStatus, stepsToday: steps,
             heartRateStatus: hrStatus, heartRateBpm: bpm, heartRateMeasuredAt: measured)
     }
+    private static func workoutName(_ type: HKWorkoutActivityType) -> String {
+        switch type {
+        case .walking: return "Walking"
+        case .running: return "Running"
+        case .cycling: return "Cycling"
+        case .swimming: return "Swimming"
+        case .yoga: return "Yoga"
+        case .dance, .cardioDance, .socialDance: return "Dance"
+        case .traditionalStrengthTraining, .functionalStrengthTraining: return "Strength training"
+        case .hiking: return "Hiking"
+        case .pilates: return "Pilates"
+        case .highIntensityIntervalTraining: return "HIIT"
+        default: return "Other recorded workout"
+        }
+    }
+    func weeklyActivity(at now: Date) async -> WeeklyActivityResult {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: now)
+        let start = calendar.date(byAdding: .day, value: -6, to: today)!
+        let formatter = DateFormatter(); formatter.dateFormat = "yyyy-MM-dd"; formatter.timeZone = calendar.timeZone
+        var days: [WeeklyActivityDay] = []
+        var latestWorkout: RecordedWorkout?
+        for offset in 0..<7 {
+            let day = calendar.date(byAdding: .day, value: offset, to: start)!
+            let end = min(calendar.date(byAdding: .day, value: 1, to: day)!, now)
+            let unavailable: HealthReadStatus? = !enabled ? .collectionDisabled : !HKHealthStore.isHealthDataAvailable() ? .deviceUnavailable : nil
+            var steps: Double?; var stepStatus = unavailable ?? .noVisibleRecords
+            var workouts: [HKWorkout] = []; var workoutStatus = unavailable ?? .noVisibleRecords
+            if unavailable == nil {
+                do {
+                    steps = try await withCheckedThrowingContinuation { continuation in
+                        let query = HKStatisticsQuery(quantityType: HKQuantityType(.stepCount), quantitySamplePredicate: HKQuery.predicateForSamples(withStart: day, end: end, options: [.strictStartDate, .strictEndDate]), options: .cumulativeSum) { _, stats, error in
+                            if let error { continuation.resume(throwing: error) }
+                            else { continuation.resume(returning: stats?.sumQuantity()?.doubleValue(for: .count())) }
+                        }
+                        store.execute(query)
+                    }
+                    stepStatus = steps == nil ? .noVisibleRecords : .available
+                } catch { stepStatus = .readFailed }
+                do {
+                    workouts = try await withCheckedThrowingContinuation { continuation in
+                        let query = HKSampleQuery(sampleType: HKObjectType.workoutType(), predicate: HKQuery.predicateForSamples(withStart: day, end: end, options: [.strictStartDate]), limit: HKObjectQueryNoLimit, sortDescriptors: nil) { _, samples, error in
+                            if let error { continuation.resume(throwing: error) }
+                            else { continuation.resume(returning: (samples as? [HKWorkout] ?? []).filter { $0.endDate <= now }) }
+                        }
+                        store.execute(query)
+                    }
+                    workoutStatus = workouts.isEmpty ? .noVisibleRecords : .available
+                } catch { workoutStatus = .readFailed }
+            }
+            if !enabled { return WeeklyActivityResult(startLocal: LocalEventTime.string(start, in: calendar.timeZone), endLocal: LocalEventTime.string(now, in: calendar.timeZone), days: []) }
+            if let latest = workouts.max(by: { $0.endDate < $1.endDate }), latest.endDate > (latestWorkout?.end ?? .distantPast) {
+                latestWorkout = RecordedWorkout(category: Self.workoutName(latest.workoutActivityType), start: latest.startDate, end: latest.endDate,
+                    durationMinutes: latest.duration / 60, timeZone: calendar.timeZone)
+            }
+            days.append(WeeklyActivityDay(date: formatter.string(from: day), steps: steps, stepsStatus: stepStatus,
+                workouts: workouts.map { Self.workoutName($0.workoutActivityType) },
+                workoutMinutes: workouts.isEmpty ? nil : workouts.reduce(0) { $0 + $1.duration / 60 }, workoutStatus: workoutStatus))
+        }
+        return WeeklyActivityResult(startLocal: LocalEventTime.string(start, in: calendar.timeZone), endLocal: LocalEventTime.string(now, in: calendar.timeZone), days: days, latestWorkout: latestWorkout)
+    }
     func glucoseHistory(at now: Date) async throws -> [GlucoseSample] {
         guard enabled, HKHealthStore.isHealthDataAvailable() else { return [] }
         let type = HKQuantityType.quantityType(forIdentifier: .bloodGlucose)!

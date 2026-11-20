@@ -12,6 +12,77 @@ final class HealthActivityTests: XCTestCase {
     func snapshot(_ health: HealthActivityResult) -> AssistantSnapshot {
         AssistantSnapshot(glucose: nil, forecast: nil, treatments: [], context: nil, now: now, timeZone: zone, healthActivity: health)
     }
+    func testWeeklyActivityRoutesAndSuppliesEvidenceWithoutGlucose() throws {
+        for question in ["Analyze my exercise over the past week", "分析最近一周运动历史", "My steps for the last 7 days"] {
+            XCTAssertTrue(HealthActivityQuery(question).weekly)
+            XCTAssertTrue(QuestionIntent(question).tools.contains(.context))
+        }
+        XCTAssertFalse(HealthActivityQuery("What's on my calendar this week?").requested)
+        var health = result()
+        health.weeklyHistory = WeeklyActivityResult(startLocal: "2026-11-10", endLocal: "2026-11-16", days: [
+            WeeklyActivityDay(date: "2026-11-15", steps: 6543, stepsStatus: .available, workouts: ["Walking"], workoutMinutes: 42, workoutStatus: .available),
+            WeeklyActivityDay(date: "2026-11-16", steps: nil, stepsStatus: .readFailed, workouts: [], workoutMinutes: nil, workoutStatus: .noVisibleRecords)])
+        let question = "Analyze my exercise over the past week"
+        let facts = snapshot(health)
+        XCTAssertNil(ExplanationFallback().requiredResponse(decision: .noData, userText: question, snapshot: facts))
+        let prompt = try GemmaPromptBuilder.build(request: AssistantModelRequest(question: question, history: [], snapshot: facts, decision: .noData, allowedTools: [.context])).prompt
+        for evidence in ["6543", "42", "Walking", "readFailed", "noVisibleRecords"] { XCTAssertTrue(prompt.contains(evidence)) }
+        XCTAssertFalse(health.response(question: question, language: .english).contains("4321"))
+        let validator = ResponseValidator()
+        let valid = validator.validate("2026-11-15: 6543 steps and 42 workout minutes. Missing records do not establish inactivity.", userText: question, decision: .noData, snapshot: facts, evidence: [.context])
+        XCTAssertTrue(valid.reasons.isEmpty, "\(valid.reasons)")
+        XCTAssertTrue(validator.validate("No tool results were returned.", userText: question, decision: .noData, snapshot: facts, evidence: [.context]).reasons.contains("weekly_activity_evidence_omitted"))
+    }
+    func testUnqualifiedActivityLogsReadAWeekAndNeverSupplyEmptyEvidence() throws {
+        var health = result()
+        health.weeklyHistory = WeeklyActivityResult(startLocal: "2026-11-10", endLocal: "2026-11-16", days: [
+            WeeklyActivityDay(date: "2026-11-15", steps: 5000, stepsStatus: .available, workouts: ["Running"], workoutMinutes: 30, workoutStatus: .available)])
+        for question in ["Can you access my activity logs?", "Analyze my activities", "Show workout history", "查看运动记录", "活动日志"] {
+            XCTAssertTrue(HealthActivityQuery(question).weekly, question)
+            XCTAssertEqual(QuestionIntent(question).tools, [.context], question)
+            XCTAssertFalse(health.response(question: question, language: .english).isEmpty)
+            let request = AssistantModelRequest(question: question, history: [], snapshot: snapshot(health), decision: .noData, allowedTools: QuestionIntent(question).tools)
+            let prompt = try GemmaPromptBuilder.build(request: request).prompt
+            XCTAssertTrue(prompt.contains("Running"), question)
+            XCTAssertTrue(prompt.contains("5000"), question)
+        }
+    }
+    func testUnavailableWeeklyLogsGiveExactReadStatusWithoutGeneration() {
+        var health = result()
+        health.weeklyHistory = WeeklyActivityResult(startLocal: "2026-11-10", endLocal: "2026-11-16", days: [
+            WeeklyActivityDay(date: "2026-11-15", steps: nil, stepsStatus: .readFailed, workouts: [], workoutMinutes: nil, workoutStatus: .noVisibleRecords)])
+        let reply = ExplanationFallback().requiredResponse(decision: .noData, userText: "Access activity logs", snapshot: snapshot(health))
+        XCTAssertTrue(reply?.contains("Read failed") == true)
+        XCTAssertTrue(reply?.contains("No visible records") == true)
+        XCTAssertFalse(reply?.contains("0 steps") == true)
+    }
+    func testScreenshotWorkedOutQuestionRoutesToActualWorkoutEvidence() throws {
+        let start = now.addingTimeInterval(-7200)
+        let workout = RecordedWorkout(category: "Walking", start: start, end: start.addingTimeInterval(2400), durationMinutes: 40, timeZone: zone)
+        var health = result()
+        health.weeklyHistory = WeeklyActivityResult(startLocal: "2026-11-10", endLocal: "2026-11-16", days: [
+            WeeklyActivityDay(date: "2026-11-16", steps: 6559, stepsStatus: .available, workouts: ["Walking"], workoutMinutes: 40, workoutStatus: .available)], latestWorkout: workout)
+        for question in ["When did I worked out last time?", "When did I last work out?", "When was my last workout?", "When did I exercise last time?", "我上一次锻炼是什么时候？"] {
+            XCTAssertTrue(HealthActivityQuery(question).latestWorkout, question)
+            XCTAssertTrue(HealthActivityQuery(question).weekly, question)
+            XCTAssertEqual(QuestionIntent(question).tools, [.context], question)
+            let response = ExplanationFallback().requiredResponse(decision: .noData, userText: question, snapshot: snapshot(health))
+            XCTAssertTrue(response?.contains(workout.startLocal) == true, question)
+            XCTAssertTrue(response?.contains(workout.endLocal) == true, question)
+            XCTAssertTrue(response?.contains("40") == true, question)
+            XCTAssertFalse(response?.contains("no tool results") == true, question)
+            let prompt = try GemmaPromptBuilder.build(request: AssistantModelRequest(question: question, history: [], snapshot: snapshot(health), decision: .noData, allowedTools: [.context])).prompt
+            XCTAssertTrue(prompt.contains(workout.startLocal), question)
+        }
+    }
+    func testLastWorkoutDoesNotInferTrainingFromStepsOrQueryTime() {
+        var health = result()
+        health.weeklyHistory = WeeklyActivityResult(startLocal: "2026-11-10", endLocal: "2026-11-16", days: [
+            WeeklyActivityDay(date: "2026-11-16", steps: 6559, stepsStatus: .available, workouts: [], workoutMinutes: nil, workoutStatus: .noVisibleRecords)])
+        let response = ExplanationFallback().requiredResponse(decision: .noData, userText: "When did I worked out last time?", snapshot: snapshot(health))
+        XCTAssertTrue(response?.contains("cannot establish when") == true)
+        XCTAssertFalse(response?.contains("latest visible workout within") == true)
+    }
     func testAbbreviatedEnglishAndChineseQueriesSelectContext() {
         for text in ["My hr?", "Latest BPM", "What's my pulse?", "我的心率", "今天走了多少步", "my step count", "Apple Health data"] {
             XCTAssertTrue(QuestionIntent(text).tools.contains(.context), text)
